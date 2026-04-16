@@ -60,3 +60,12 @@ bs58 = "0.5"
 
 # Process inspection on macOS and Linux
 nix = { version = "0.27", features = ["process", "net"] }
+
+# UUID generation for finding IDs
+uuid = { version = "1.6", features = ["v4", "serde"] }
+
+# Home directory detection
+dirs = "5.0"
+
+# Random number generation for key generation
+rand = "0.8"

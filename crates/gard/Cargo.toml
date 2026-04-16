@@ -32,6 +32,9 @@ regex = { workspace = true }
 colored = { workspace = true }
 bs58 = { workspace = true }
 nix = { workspace = true }
+uuid = { workspace = true }
+dirs = { workspace = true }
+rand = { workspace = true }
 
 [dev-dependencies]
 # Testing utilities
