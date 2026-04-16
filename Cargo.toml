@@ -1,0 +1,62 @@
+[workspace]
+members = ["crates/gard"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Gard Contributors"]
+license = "MIT"
+repository = "https://github.com/nextlevelbuilder/gard"
+description = "OPSEC guardian CLI tool for Solana protocol teams"
+
+[workspace.dependencies]
+# CLI argument parsing - well-maintained, widely used in production Rust CLIs
+clap = { version = "4.4", features = ["derive", "cargo"] }
+
+# Async runtime - Tokio is standard for async I/O in security tools
+tokio = { version = "1.35", features = ["full"] }
+
+# JSON serialization - serde is essential for machine-readable output
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# TOML configuration parsing
+toml = "0.8"
+
+# Structured logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Cryptography for report signing (Ed25519)
+ed25519-dalek = "2.1"
+hex = "0.4"
+
+# Error handling with context
+anyhow = "1.0"
+thiserror = "1.0"
+
+# System information and process management
+sysinfo = "0.30"
+which = "5.0"
+
+# Platform-specific utilities
+cfg-if = "1.0"
+
+# Time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Network utilities for RPC calls
+reqwest = { version = "0.11", features = ["json", "rustls-tls"], default-features = false }
+
+# Regex for pattern matching
+regex = "1.10"
+
+# Terminal UI and colors
+colored = "2.1"
+
+# Base58 encoding for Solana addresses
+bs58 = "0.5"
+
+# Process inspection on macOS and Linux
+nix = { version = "0.27", features = ["process", "net"] }

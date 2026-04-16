@@ -1,0 +1,20 @@
+[build]
+# Use rustls instead of OpenSSL for TLS (avoid system dependency)
+rustflags = ["-C", "link-arg=-fuse-ld=lld"]
+
+# Deny list for known unsafe dependencies that should never be used in Gard
+# Commented dependencies are dangerous for OPSEC tooling
+# unsafe_crate = { version = "*", reason = "Explanation of why it's unsafe" }
+
+[profile.release-with-debug]
+inherits = "release"
+debug = true
+strip = false
+
+[alias]
+# Security-focused build and test commands
+audit-deps = "deny check advisories"
+audit-licenses = "deny check licenses"
+audit-full = "deny check all"
+test-all = "test --all-features --no-fail-fast"
+check-security = "clippy -- -D warnings -D clippy::unsafe_code"

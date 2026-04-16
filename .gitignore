@@ -1,0 +1,26 @@
+# Rust
+/target/
+Cargo.lock
+**/*.rs.bk
+*.rlib
+*.rmeta
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.iml
+
+# Test artifacts
+/tests/tmp/
+/tests/fixtures/output/
+
+# Build artifacts
+*.pdb
+
+# Gard-specific
+~/.gard/
+.gard/

@@ -1,0 +1,34 @@
+# Gard Clippy Configuration
+# Security-focused linting for OPSEC tooling
+
+# Deny all clippy warnings by default (enforced in CI)
+# This is appropriate for security-sensitive code
+warn-import-cycles = true
+
+# Cognitive complexity threshold - keep functions simple and auditable
+too-many-arguments-threshold = 5
+type-complexity-threshold = 250
+
+# String formatting lints
+single-char-binding-names-threshold = 5
+
+# Disallow certain patterns that are insecure or confusing
+# These are enforced as warnings and will fail in CI
+cognitive-complexity-threshold = 30
+
+# Allow certain patterns that are needed but should be rare
+# Comments must be added for each instance
+allow-expect-in-tests = true
+allow-unwrap-in-tests = true
+
+# Enforcement of absolute paths for macros to avoid namespace confusion
+absolute-paths-max-segments = 2
+
+# Restrict match-like-matches patterns in security-sensitive code
+match-boolean-expr = false
+
+# Restrict very large constants
+too-many-lines-threshold = 200
+
+# Verbose code may be needed for clarity and safety
+verbose-bit-mask-threshold = 1

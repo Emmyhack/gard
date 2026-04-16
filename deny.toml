@@ -1,0 +1,48 @@
+[advisories]
+# Fetch advisory database from RustSec
+db-path = "~/.cargo/advisory-db"
+db-urls = ["https://github.com/rustsec/advisory-db/raw/main/db.json.gz"]
+# Vulnerability severity threshold - fail on all security issues
+vulnerability = "deny"
+# Unmaintained crate policy - warn about unmaintained dependencies
+unmaintained = "warn"
+# Unsound dependency policy
+unsound = "deny"
+# Yanked version policy - deny yanked crates in use
+yanked = "deny"
+# Notice policy
+notice = "warn"
+
+[licenses]
+# Allowed license list - only permissive licenses for Gard
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-DFS-2016",
+    "OpenSSL",
+]
+# Denied licenses - GPL and other copyleft not compatible with MIT
+deny = [
+    "GPL-2.0",
+    "GPL-3.0",
+    "AGPL-3.0",
+]
+# License policy for ambiguous cases
+copyleft = "warn"
+# Allow crates with only NOASSERTION or evaluation needed
+allow-osi-fsf-free = true
+default = "deny"
+
+[bans]
+# Duplicate dependency checking
+multiple-versions = "warn"
+# Wildcard dependency versions
+wildcards = "warn"
+# Known insecure crates - explicitly denied
+deny = [
+    # Example: {name = "openssl-sys", reason = "Use rustls instead"}
+]
