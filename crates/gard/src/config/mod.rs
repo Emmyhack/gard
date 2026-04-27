@@ -64,6 +64,7 @@ impl Default for Policy {
 
 #[cfg(test)]
 mod tests {
+    #[allow(unused_imports)]
     use super::*;
 
     #[test]

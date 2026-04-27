@@ -6,6 +6,10 @@ use ed25519_dalek::{SigningKey, Signer};
 use rand::Rng;
 use std::fs;
 use std::path::PathBuf;
+use zeroize::Zeroize;
+
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 
 pub struct ReportSigner {
     signing_key: SigningKey,
@@ -25,6 +29,13 @@ impl ReportSigner {
 
         if !key_dir.exists() {
             fs::create_dir_all(key_dir).map_err(|e| crate::error::GardError::IoError(e))?;
+            // Set directory permissions to 0700 (owner read/write/execute only)
+            #[cfg(unix)]
+            {
+                let permissions = std::fs::Permissions::from_mode(0o700);
+                fs::set_permissions(key_dir, permissions)
+                    .map_err(|e| crate::error::GardError::IoError(e))?;
+            }
         }
 
         if key_path.exists() {
@@ -37,16 +48,27 @@ impl ReportSigner {
             }
             let mut secret_bytes = [0u8; 32];
             secret_bytes.copy_from_slice(&key_bytes);
-            Ok(SigningKey::from_bytes(&secret_bytes))
+            let signing_key = SigningKey::from_bytes(&secret_bytes);
+            // Zeroize the temporary bytes used for key loading
+            secret_bytes.zeroize();
+            Ok(signing_key)
         } else {
             // Generate new keypair
             let mut rng = rand::thread_rng();
             let seed: [u8; 32] = rng.gen();
             let signing_key = SigningKey::from_bytes(&seed);
 
-            // Save private key
+            // Save private key with restricted permissions
             fs::write(&key_path, &signing_key.to_bytes())
                 .map_err(|e| crate::error::GardError::IoError(e))?;
+            
+            // Set file permissions to 0600 (owner read/write only)
+            #[cfg(unix)]
+            {
+                let permissions = std::fs::Permissions::from_mode(0o600);
+                fs::set_permissions(&key_path, permissions)
+                    .map_err(|e| crate::error::GardError::IoError(e))?;
+            }
 
             // Save public key in OpenSSH format
             let pub_key_path = Self::public_key_path()?;
@@ -54,6 +76,14 @@ impl ReportSigner {
             let pub_key_str = format!("ssh-ed25519 {}", hex::encode(verifying_key.as_bytes()));
             fs::write(&pub_key_path, pub_key_str)
                 .map_err(|e| crate::error::GardError::IoError(e))?;
+            
+            // Set public key file permissions to 0644 (readable by all, writable by owner)
+            #[cfg(unix)]
+            {
+                let permissions = std::fs::Permissions::from_mode(0o644);
+                fs::set_permissions(&pub_key_path, permissions)
+                    .map_err(|e| crate::error::GardError::IoError(e))?;
+            }
 
             Ok(signing_key)
         }
@@ -130,6 +160,7 @@ pub fn verify_report(report: &Report) -> Result<bool> {
 
 #[cfg(test)]
 mod tests {
+    #[allow(unused_imports)]
     use super::*;
 
     #[test]

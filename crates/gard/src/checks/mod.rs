@@ -61,6 +61,7 @@ pub use registry::CheckRegistry;
 
 #[cfg(test)]
 mod tests {
+    #[allow(unused_imports)]
     use super::*;
 
     #[test]

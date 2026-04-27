@@ -36,6 +36,9 @@ uuid = { workspace = true }
 dirs = { workspace = true }
 rand = { workspace = true }
 
+# Secure memory handling for cryptographic keys
+zeroize = { version = "1.7", features = ["derive"] }
+
 [dev-dependencies]
 # Testing utilities
 tempfile = "3.8"

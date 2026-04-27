@@ -210,6 +210,7 @@ pub fn format_report_markdown(report: &Report) -> String {
 
 #[cfg(test)]
 mod tests {
+    #[allow(unused_imports)]
     use super::*;
 
     #[test]
