@@ -196,6 +196,14 @@ struct SuppressionStatus {
     expiring_soon: bool,
 }
 
+/// Per-check aggregate for a member, feeding the dashboard heatmap
+#[derive(serde::Serialize)]
+struct CheckCell {
+    id: String,
+    severity: String,
+    count: usize,
+}
+
 /// One member's row in the fleet view
 #[derive(serde::Serialize)]
 struct MemberStatus {
@@ -213,6 +221,7 @@ struct MemberStatus {
     suppressions: Vec<SuppressionStatus>,
     new_check_ids: Vec<String>,
     resolved_check_ids: Vec<String>,
+    checks: Vec<CheckCell>,
 }
 
 fn status(
@@ -733,6 +742,25 @@ fn evaluate_member(
         None => (Vec::new(), Vec::new()),
     };
 
+    // Worst severity and count per check, for the findings matrix
+    let mut by_check: std::collections::BTreeMap<String, (crate::types::Severity, usize)> =
+        std::collections::BTreeMap::new();
+    for finding in &report.findings {
+        let entry = by_check
+            .entry(finding.check_id.clone())
+            .or_insert((finding.severity, 0));
+        entry.0 = entry.0.max(finding.severity);
+        entry.1 += 1;
+    }
+    let checks = by_check
+        .into_iter()
+        .map(|(id, (severity, count))| CheckCell {
+            id,
+            severity: severity.to_string(),
+            count,
+        })
+        .collect();
+
     MemberStatus {
         file: path
             .file_name()
@@ -753,6 +781,7 @@ fn evaluate_member(
         suppressions,
         new_check_ids,
         resolved_check_ids,
+        checks,
     }
 }
 

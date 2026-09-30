@@ -5,166 +5,377 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta http-equiv="refresh" content="300">
 <title>Gard Fleet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
-/* Layout: summary tiles over a member table; state carried by pills, not color alone */
+/* Layout: app shell — icon-free sidebar of section anchors, posture hero,
+   delta tiles, member table, findings heatmap, suppression/activity rail.
+   Dark-first (security-ops room aesthetic); light theme fully defined. */
 :root {
-  --page: #f9f9f7;
-  --surface: #fcfcfb;
-  --ink: #0b0b0b;
-  --ink-2: #52514e;
-  --muted: #898781;
-  --grid: #e1e0d9;
-  --border: rgba(11, 11, 11, 0.10);
-  --good: #0ca30c;
+  --bg: #0d0d13;
+  --panel: #15151e;
+  --panel-2: #1b1b27;
+  --inset: #10101a;
+  --ink: #f1f0f7;
+  --ink-2: #a5a3b8;
+  --muted: #676577;
+  --line: rgba(255, 255, 255, 0.07);
+  --line-2: rgba(255, 255, 255, 0.12);
+  --accent: #8b7cf7;
+  --accent-2: #b39df5;
+  --accent-ink: #cfc5ff;
+  --accent-wash: rgba(139, 124, 247, 0.14);
+  --good: #31c46b;
   --warning: #fab219;
   --serious: #ec835a;
-  --critical: #d03b3b;
-  --good-wash: rgba(12, 163, 12, 0.10);
-  --warning-wash: rgba(250, 178, 25, 0.14);
+  --critical: #e05252;
+  --good-wash: rgba(49, 196, 107, 0.13);
+  --warning-wash: rgba(250, 178, 25, 0.13);
   --serious-wash: rgba(236, 131, 90, 0.14);
-  --critical-wash: rgba(208, 59, 59, 0.10);
+  --critical-wash: rgba(224, 82, 82, 0.13);
+  --cell-0: rgba(255, 255, 255, 0.04);
+  --hero-a: #6d5df0;
+  --hero-b: #b558d6;
+  --hero-c: #e8944a;
+  color-scheme: dark;
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --page: #0d0d0d;
-    --surface: #1a1a19;
-    --ink: #ffffff;
-    --ink-2: #c3c2b7;
-    --muted: #898781;
-    --grid: #2c2c2a;
-    --border: rgba(255, 255, 255, 0.10);
-    color-scheme: dark;
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f2f1f7;
+    --panel: #ffffff;
+    --panel-2: #f7f6fb;
+    --inset: #efedf6;
+    --ink: #17151f;
+    --ink-2: #57546b;
+    --muted: #8b889c;
+    --line: rgba(23, 21, 31, 0.08);
+    --line-2: rgba(23, 21, 31, 0.16);
+    --accent: #6a58e8;
+    --accent-2: #8b7cf7;
+    --accent-ink: #4d3dc9;
+    --accent-wash: rgba(106, 88, 232, 0.10);
+    --good: #118a41;
+    --warning: #9a6c00;
+    --serious: #b85426;
+    --critical: #c22f2f;
+    --good-wash: rgba(17, 138, 65, 0.10);
+    --warning-wash: rgba(154, 108, 0, 0.12);
+    --serious-wash: rgba(184, 84, 38, 0.12);
+    --critical-wash: rgba(194, 47, 47, 0.10);
+    --cell-0: rgba(23, 21, 31, 0.05);
+    color-scheme: light;
   }
 }
-:root[data-theme="dark"] {
-  --page: #0d0d0d;
-  --surface: #1a1a19;
-  --ink: #ffffff;
-  --ink-2: #c3c2b7;
-  --muted: #898781;
-  --grid: #2c2c2a;
-  --border: rgba(255, 255, 255, 0.10);
-  color-scheme: dark;
+:root[data-theme="light"] {
+  --bg: #f2f1f7;
+  --panel: #ffffff;
+  --panel-2: #f7f6fb;
+  --inset: #efedf6;
+  --ink: #17151f;
+  --ink-2: #57546b;
+  --muted: #8b889c;
+  --line: rgba(23, 21, 31, 0.08);
+  --line-2: rgba(23, 21, 31, 0.16);
+  --accent: #6a58e8;
+  --accent-2: #8b7cf7;
+  --accent-ink: #4d3dc9;
+  --accent-wash: rgba(106, 88, 232, 0.10);
+  --good: #118a41;
+  --warning: #9a6c00;
+  --serious: #b85426;
+  --critical: #c22f2f;
+  --good-wash: rgba(17, 138, 65, 0.10);
+  --warning-wash: rgba(154, 108, 0, 0.12);
+  --serious-wash: rgba(184, 84, 38, 0.12);
+  --critical-wash: rgba(194, 47, 47, 0.10);
+  --cell-0: rgba(23, 21, 31, 0.05);
+  color-scheme: light;
 }
 * { box-sizing: border-box; }
 body {
   margin: 0;
-  background: var(--page);
+  background: var(--bg);
   color: var(--ink);
-  font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
-  padding-block: 24px;
-  padding-inline: max(16px, 4vw);
+  font: 14px/1.55 "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  min-height: 100vh;
 }
-main { max-width: 1080px; margin-inline: auto; display: grid; gap: 20px; }
-header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px; }
-h1 { font-size: 20px; font-weight: 650; margin: 0; letter-spacing: -0.01em; }
-h1 small { font-weight: 500; color: var(--muted); font-size: 13px; }
-.meta { color: var(--ink-2); font-size: 13px; margin-left: auto; }
-.banner {
-  border: 1px solid var(--border);
-  border-left: 4px solid var(--good);
-  background: var(--good-wash);
-  border-radius: 6px;
-  padding: 10px 14px;
-  font-weight: 600;
+.mono { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+.shell { display: grid; grid-template-columns: 216px 1fr; min-height: 100vh; }
+@media (max-width: 860px) { .shell { grid-template-columns: 1fr; } }
+
+/* ---------- Sidebar ---------- */
+.side {
+  border-right: 1px solid var(--line);
+  padding: 22px 16px;
+  display: flex; flex-direction: column; gap: 4px;
+  position: sticky; top: 0; height: 100vh;
 }
-.banner.bad { border-left-color: var(--critical); background: var(--critical-wash); }
-.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
-.tile {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 12px 14px;
+@media (max-width: 860px) {
+  .side { position: static; height: auto; flex-direction: row; flex-wrap: wrap;
+          align-items: center; border-right: 0; border-bottom: 1px solid var(--line); }
 }
-.tile .label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
-.tile .value { font-size: 28px; font-weight: 650; line-height: 1.2; }
-.tile .sub { color: var(--ink-2); font-size: 12px; }
-.tablewrap { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; overflow-x: auto; }
-table { border-collapse: collapse; width: 100%; min-width: 640px; }
+.brand { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+.brand-mark {
+  width: 32px; height: 32px; border-radius: 9px; flex: none;
+  background: linear-gradient(135deg, var(--hero-a), var(--hero-b));
+  display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 15px;
+}
+.brand-name { font-weight: 800; font-size: 16px; letter-spacing: -0.02em; }
+.brand-sub { font-size: 11px; color: var(--muted); margin-top: -3px; }
+.nav-label {
+  font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--muted); margin: 14px 8px 6px; font-weight: 700;
+}
+@media (max-width: 860px) { .nav-label { display: none; } .brand { margin-bottom: 0; margin-right: 10px; } }
+.nav a {
+  display: block; padding: 8px 10px; border-radius: 8px;
+  color: var(--ink-2); text-decoration: none; font-weight: 600; font-size: 13.5px;
+}
+.nav a:hover { background: var(--panel-2); color: var(--ink); }
+.nav a.active { background: var(--accent-wash); color: var(--accent-ink); }
+.side-foot { margin-top: auto; padding: 10px; font-size: 11.5px; color: var(--muted); }
+@media (max-width: 860px) { .side-foot { display: none; } }
+
+/* ---------- Main ---------- */
+.main { padding: 22px clamp(16px, 3vw, 34px) 40px; min-width: 0; }
+.topbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-bottom: 20px; }
+.topbar h1 { font-size: 21px; font-weight: 800; letter-spacing: -0.02em; margin: 0; }
+.topbar .sub { color: var(--muted); font-size: 12.5px; }
+.topbar .right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.updated { font-size: 12px; color: var(--muted); }
+.livedot { display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+           background: var(--good); margin-right: 5px; }
+button.ghost {
+  border: 1px solid var(--line-2); background: transparent; color: var(--ink-2);
+  border-radius: 8px; padding: 6px 12px; font: inherit; font-size: 12.5px;
+  font-weight: 600; cursor: pointer;
+}
+button.ghost:hover { color: var(--ink); border-color: var(--muted); }
+button.ghost:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.grid { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr) 300px; }
+@media (max-width: 1100px) { .grid { grid-template-columns: 1fr; } }
+.col { display: grid; gap: 14px; align-content: start; min-width: 0; }
+
+.card {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+  padding: 16px 18px; min-width: 0;
+}
+.card h2 { font-size: 13px; font-weight: 700; margin: 0 0 12px; letter-spacing: -0.01em; }
+.card h2 .count { color: var(--muted); font-weight: 600; }
+
+/* ---------- Hero ---------- */
+.hero {
+  position: relative; overflow: hidden; border-radius: 14px;
+  border: 1px solid var(--line);
+  background:
+    radial-gradient(420px 200px at 85% -20%, color-mix(in oklab, var(--hero-c) 38%, transparent), transparent 70%),
+    radial-gradient(520px 260px at 70% 120%, color-mix(in oklab, var(--hero-b) 42%, transparent), transparent 72%),
+    radial-gradient(640px 300px at 18% 50%, color-mix(in oklab, var(--hero-a) 45%, transparent), transparent 75%),
+    var(--panel);
+  padding: 22px 20px;
+  display: flex; flex-wrap: wrap; gap: 14px 24px; align-items: center;
+}
+.hero .state { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; margin: 0; }
+.hero .detail { color: var(--ink-2); font-size: 13px; max-width: 46ch; }
+.hero .badge {
+  margin-left: auto; align-self: flex-start;
+  border-radius: 999px; padding: 6px 14px; font-weight: 800; font-size: 13px;
+  display: inline-flex; align-items: center; gap: 7px; white-space: nowrap;
+}
+.badge.ok { color: var(--good); background: var(--good-wash); border: 1px solid color-mix(in oklab, var(--good) 40%, transparent); }
+.badge.bad { color: var(--critical); background: var(--critical-wash); border: 1px solid color-mix(in oklab, var(--critical) 40%, transparent); }
+
+/* ---------- Stat tiles ---------- */
+.tiles { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.tile { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+.tile .label { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--ink-2); font-weight: 600; }
+.tile .dot { width: 8px; height: 8px; border-radius: 3px; background: var(--accent); flex: none; }
+.tile .value { font-size: 30px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.25; margin-top: 4px; }
+.tile .delta { font-size: 11.5px; color: var(--muted); }
+.tile .delta .up { color: var(--critical); font-weight: 700; }
+.tile .delta .down { color: var(--good); font-weight: 700; }
+
+/* ---------- Members table ---------- */
+.tscroll { overflow-x: auto; margin: 0 -18px; padding: 0 18px; }
+table { border-collapse: collapse; width: 100%; min-width: 560px; }
 th {
-  text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
-  color: var(--muted); font-weight: 600; padding: 10px 12px; border-bottom: 1px solid var(--grid);
+  text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--muted); font-weight: 700; padding: 8px 10px; border-bottom: 1px solid var(--line);
 }
-td { padding: 10px 12px; border-bottom: 1px solid var(--grid); vertical-align: top; }
-tr.member-row td { border-bottom: none; }
-tr.detail-row td { padding-top: 0; }
+td { padding: 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
 tbody tr:last-child td { border-bottom: none; }
-td.num { font-variant-numeric: tabular-nums; text-align: right; }
-th.num { text-align: right; }
-.host, .keyid { color: var(--ink-2); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; }
+tr.drow td { border-bottom: none; padding-top: 12px; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.avatar {
+  width: 30px; height: 30px; border-radius: 50%; flex: none;
+  display: grid; place-items: center; font-weight: 800; font-size: 12px; color: #fff;
+}
+.who { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.who .nm { font-weight: 700; }
+.who .hs { font-size: 11.5px; color: var(--muted); }
 .pill {
-  display: inline-flex; align-items: center; gap: 5px;
-  border-radius: 999px; padding: 2px 10px 2px 8px;
-  font-size: 12px; font-weight: 650; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 5px; border-radius: 999px;
+  padding: 3px 11px 3px 9px; font-size: 11.5px; font-weight: 800; white-space: nowrap;
 }
 .pill.pass { color: var(--good); background: var(--good-wash); }
 .pill.stale { color: var(--warning); background: var(--warning-wash); }
-.pill.fail { color: var(--critical); background: var(--critical-wash); }
-.pill.badsig { color: var(--critical); background: var(--critical-wash); }
-:root[data-theme="dark"] .pill.stale, :root:not([data-theme="light"]) .pill.stale { color: var(--warning); }
-.detail { display: grid; gap: 3px; font-size: 12.5px; color: var(--ink-2); }
-.detail .warn { color: var(--serious); font-weight: 600; }
-.detail .alarm { color: var(--critical); font-weight: 600; }
-.detail .ok { color: var(--good); }
-.empty { padding: 32px; text-align: center; color: var(--ink-2); }
-.empty code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-footer { color: var(--muted); font-size: 12px; display: flex; flex-wrap: wrap; gap: 6px 16px; }
-button.theme {
-  border: 1px solid var(--border); background: var(--surface); color: var(--ink-2);
-  border-radius: 6px; padding: 3px 10px; font: inherit; font-size: 12px; cursor: pointer;
+.pill.fail, .pill.badsig { color: var(--critical); background: var(--critical-wash); }
+.sig-ok { color: var(--ink-2); font-size: 12px; }
+.sig-bad { color: var(--critical); font-weight: 800; font-size: 12px; }
+.detail-lines { display: grid; gap: 3px; font-size: 12px; color: var(--ink-2); }
+.detail-lines .warn { color: var(--serious); font-weight: 600; }
+.detail-lines .alarm { color: var(--critical); font-weight: 600; }
+.detail-lines .ok { color: var(--good); }
+
+/* ---------- Heatmap ---------- */
+.legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 11.5px; color: var(--ink-2); margin-bottom: 12px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.lg { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+.hm { display: grid; gap: 4px; overflow-x: auto; padding-bottom: 4px; }
+.hm-row { display: flex; gap: 4px; align-items: center; }
+.hm-name { width: 92px; flex: none; font-size: 11.5px; color: var(--ink-2); font-weight: 600;
+           white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hm-cell { width: 26px; height: 26px; border-radius: 6px; flex: none; background: var(--cell-0); }
+.hm-cell.sev-INFO, .hm-cell.sev-LOW { background: var(--accent-wash); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent) 35%, transparent); }
+.hm-cell.sev-MEDIUM { background: var(--warning-wash); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--warning) 45%, transparent); }
+.hm-cell.sev-HIGH { background: var(--serious-wash); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--serious) 50%, transparent); }
+.hm-cell.sev-CRITICAL { background: var(--critical-wash); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--critical) 55%, transparent); }
+.hm-x { display: flex; gap: 4px; margin-left: 96px; }
+.hm-x span {
+  width: 26px; flex: none; font-size: 9.5px; color: var(--muted);
+  writing-mode: vertical-rl; transform: rotate(180deg);
+  max-height: 86px; overflow: hidden; white-space: nowrap;
 }
-button.theme:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 1px; }
-.tokenform {
-  background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
-  padding: 14px; display: grid; gap: 8px; max-width: 420px;
+
+/* ---------- Rail ---------- */
+.event { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.event:last-child { border-bottom: none; }
+.event .bar { width: 3px; border-radius: 2px; background: var(--accent); flex: none; }
+.event.warn .bar { background: var(--warning); }
+.event.alarm .bar { background: var(--critical); }
+.event.ok .bar { background: var(--good); }
+.event .t { font-weight: 700; font-size: 12.5px; }
+.event .d { font-size: 11.5px; color: var(--ink-2); }
+.event .when { margin-left: auto; font-size: 10.5px; color: var(--muted); white-space: nowrap; }
+.rail-empty { color: var(--muted); font-size: 12.5px; }
+
+/* ---------- Token gate / empty ---------- */
+.gate { display: grid; gap: 10px; max-width: 420px; }
+.gate label { font-size: 13px; color: var(--ink-2); }
+.gate-row { display: flex; gap: 8px; }
+.gate-row input {
+  flex: 1; min-width: 0; border: 1px solid var(--line-2); border-radius: 9px;
+  background: var(--inset); color: var(--ink); padding: 8px 12px; font: inherit;
 }
-.tokenrow { display: flex; gap: 8px; }
-.tokenrow input {
-  flex: 1; min-width: 0; border: 1px solid var(--grid); border-radius: 6px;
-  background: var(--page); color: var(--ink); padding: 6px 10px; font: inherit;
+.gate-row button {
+  border: none; border-radius: 9px; padding: 8px 16px; font: inherit; font-weight: 700;
+  background: var(--accent); color: #fff; cursor: pointer;
 }
-.tokenrow button {
-  border: 1px solid var(--border); background: var(--surface); color: var(--ink);
-  border-radius: 6px; padding: 6px 14px; font: inherit; font-weight: 600; cursor: pointer;
-}
-.tokenerr { color: var(--critical); font-size: 12.5px; }
-@media (max-width: 480px) { .tile .value { font-size: 22px; } }
+.gate-err { color: var(--critical); font-size: 12px; }
+.empty { padding: 26px 0; color: var(--ink-2); font-size: 13px; }
 </style>
 </head>
 <body>
-<main>
-  <header>
-    <h1>Gard Fleet <small id="fleet-label"></small></h1>
-    <span class="meta" id="generated"></span>
-    <button class="theme" id="themebtn" type="button">Theme</button>
-  </header>
-  <div class="banner" id="banner">Loading fleet status…</div>
-  <form class="tokenform" id="tokenform" hidden>
-    <label for="tokeninput">This fleet server requires an access token.</label>
-    <div class="tokenrow">
-      <input id="tokeninput" type="password" autocomplete="off" placeholder="Access token">
-      <button type="submit">Unlock</button>
+<div class="shell">
+  <aside class="side">
+    <div class="brand">
+      <div class="brand-mark">G</div>
+      <div>
+        <div class="brand-name">Gard</div>
+        <div class="brand-sub">OPSEC guardian</div>
+      </div>
     </div>
-    <span class="tokenerr" id="tokenerr" hidden>Token rejected — check with your fleet admin.</span>
-  </form>
-  <section class="tiles" id="tiles"></section>
-  <section class="tablewrap">
-    <table aria-describedby="generated">
-      <thead>
-        <tr>
-          <th>Member</th><th>Host</th><th class="num">Age</th><th>Signature</th>
-          <th class="num">Crit</th><th class="num">High</th><th class="num">Findings</th>
-          <th>Trusted</th><th>Status</th>
-        </tr>
-      </thead>
-      <tbody id="rows"></tbody>
-    </table>
-  </section>
-  <footer>
-    <span>Generated by <code>gard fleet dashboard</code> — regenerated on every <code>gard fleet submit</code>.</span>
-    <span>Stale threshold: <span id="stale-th"></span>h. Page auto-reloads every 5 minutes.</span>
-  </footer>
-</main>
+    <div class="nav-label">Fleet</div>
+    <nav class="nav">
+      <a href="#overview" class="active">Overview</a>
+      <a href="#members">Members</a>
+      <a href="#matrix">Findings matrix</a>
+      <a href="#suppressions">Suppressions</a>
+      <a href="#activity">Activity</a>
+    </nav>
+    <div class="side-foot">
+      Signed reports · Ed25519 verified<br>
+      <span class="mono" id="ver">gard</span>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar" id="overview">
+      <div>
+        <h1>Fleet overview</h1>
+        <div class="sub">Machine posture across the signing team</div>
+      </div>
+      <div class="right">
+        <span class="updated" id="updated"><span class="livedot"></span>connecting…</span>
+        <button class="ghost" id="themebtn" type="button">Theme</button>
+      </div>
+    </div>
+
+    <form class="card gate" id="tokenform" hidden>
+      <label for="tokeninput">This fleet server requires an access token.</label>
+      <div class="gate-row">
+        <input id="tokeninput" type="password" autocomplete="off" placeholder="Access token">
+        <button type="submit">Unlock</button>
+      </div>
+      <span class="gate-err" id="tokenerr" hidden>Token rejected — check with your fleet admin.</span>
+    </form>
+
+    <div class="grid">
+      <div class="col">
+        <section class="hero" id="hero">
+          <div>
+            <p class="state" id="hero-state">Loading fleet status…</p>
+            <div class="detail" id="hero-detail">Waiting for the first status response.</div>
+          </div>
+          <span class="badge ok" id="hero-badge" hidden></span>
+        </section>
+
+        <section class="tiles" id="tiles"></section>
+
+        <section class="card" id="members">
+          <h2>Members <span class="count" id="member-count"></span></h2>
+          <div class="tscroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Member</th><th>Signature</th><th class="num">Age</th>
+                  <th class="num">Crit</th><th class="num">High</th><th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="rows"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="card" id="matrix">
+          <h2>Findings matrix <span class="count">worst severity per member × check</span></h2>
+          <div class="legend">
+            <span><span class="lg" style="background:var(--cell-0)"></span> Clear</span>
+            <span><span class="lg" style="background:var(--accent-wash)"></span> Low</span>
+            <span><span class="lg" style="background:var(--warning-wash)"></span> Medium</span>
+            <span><span class="lg" style="background:var(--serious-wash)"></span> High</span>
+            <span><span class="lg" style="background:var(--critical-wash)"></span> Critical</span>
+          </div>
+          <div class="hm" id="heatmap"></div>
+        </section>
+      </div>
+
+      <div class="col">
+        <section class="card" id="suppressions">
+          <h2>Suppressions</h2>
+          <div id="supp-list"></div>
+        </section>
+        <section class="card" id="activity">
+          <h2>Changes since last submissions</h2>
+          <div id="act-list"></div>
+        </section>
+      </div>
+    </div>
+  </main>
+</div>
+
 <script>
 // Static mode embeds the payload; serve mode replaces it with null and
 // the page polls the live API instead.
@@ -172,6 +383,14 @@ let DATA = __GARD_DATA__;
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) =>
   ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+const AVATARS = ["#8b7cf7", "#d55181", "#199e70", "#c98500", "#3987e5", "#e66767"];
+const avatarColor = (name) => {
+  let h = 0;
+  for (const ch of String(name)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return AVATARS[h % AVATARS.length];
+};
+const initials = (name) => String(name).slice(0, 2).toUpperCase();
 
 function memberState(m) {
   if (!m.signature_valid) return { cls: "badsig", icon: "✕", label: "BAD SIG" };
@@ -182,82 +401,145 @@ function memberState(m) {
 
 function render() {
   const members = DATA.members || [];
-  document.getElementById("fleet-label").textContent = DATA.fleet_label || "";
-  document.getElementById("generated").textContent =
-    "Generated " + new Date(DATA.generated_at).toLocaleString();
-  document.getElementById("stale-th").textContent = DATA.max_age_hours;
+  document.getElementById("ver").textContent = "gard fleet · stale > " + DATA.max_age_hours + "h";
+  document.getElementById("updated").innerHTML =
+    '<span class="livedot"></span>Updated ' + new Date(DATA.generated_at).toLocaleTimeString();
 
+  // Hero
+  const failing = members.filter((m) => !memberState(m).cls.match(/^pass$/)).length;
+  const badge = document.getElementById("hero-badge");
+  badge.hidden = false;
+  if (members.length === 0) {
+    document.getElementById("hero-state").textContent = "No reports yet";
+    document.getElementById("hero-detail").innerHTML =
+      "Members submit with <span class=\"mono\">gard fleet submit</span>. The first report lights this page up.";
+    badge.hidden = true;
+  } else if (DATA.all_green) {
+    document.getElementById("hero-state").textContent = "All clear to sign";
+    document.getElementById("hero-detail").textContent =
+      "Every member is passing preflight with a fresh, signature-verified report.";
+    badge.className = "badge ok"; badge.textContent = "✓ FLEET GREEN";
+  } else {
+    document.getElementById("hero-state").textContent =
+      failing + " of " + members.length + " member" + (members.length === 1 ? "" : "s") + " need attention";
+    document.getElementById("hero-detail").textContent =
+      "Hold signing ceremonies until the members below are back to green.";
+    badge.className = "badge bad"; badge.textContent = "✕ NOT GREEN";
+  }
+
+  // Tiles with deltas from new/resolved diffs
+  const newTotal = members.reduce((n, m) => n + (m.new_check_ids || []).length, 0);
+  const resolvedTotal = members.reduce((n, m) => n + (m.resolved_check_ids || []).length, 0);
   const passing = members.filter((m) => memberState(m).label === "PASS").length;
-  const blocking = members.reduce((n, m) => n + (m.preflight_passing ? 0 : 1), 0);
+  const critTotal = members.reduce((n, m) => n + m.critical, 0);
+  const highTotal = members.reduce((n, m) => n + m.high, 0);
   const stale = members.filter((m) => m.stale).length;
-  const badsig = members.filter((m) => !m.signature_valid).length;
   const expiring = members.reduce(
     (n, m) => n + (m.suppressions || []).filter((s) => s.expiring_soon && s.days_left >= 0).length, 0);
-
-  const banner = document.getElementById("banner");
-  if (DATA.all_green) {
-    banner.className = "banner";
-    banner.textContent = "✓ Fleet green — all members passing and fresh.";
-  } else {
-    banner.className = "banner bad";
-    banner.textContent = "✕ Fleet not green — review the members below.";
-  }
+  const deltaLine = (nw, rs) =>
+    (nw ? '<span class="up">▲ ' + nw + " new</span>" : "") +
+    (nw && rs ? " · " : "") +
+    (rs ? '<span class="down">▼ ' + rs + " resolved</span>" : "") +
+    (!nw && !rs ? "no change since last submissions" : "");
 
   const tiles = [
-    { label: "Members", value: members.length, sub: passing + " passing" },
-    { label: "Failing preflight", value: blocking, sub: badsig ? badsig + " bad signature" : "signatures all valid" },
+    { label: "Members", value: members.length, sub: passing + " passing preflight" },
+    { label: "Critical / High", value: critTotal + " / " + highTotal, sub: deltaLine(newTotal, resolvedTotal) },
     { label: "Stale reports", value: stale, sub: "older than " + DATA.max_age_hours + "h" },
-    { label: "Suppressions expiring", value: expiring, sub: "within 7 days" },
+    { label: "Expiring suppressions", value: expiring, sub: "within 7 days" },
   ];
   document.getElementById("tiles").innerHTML = tiles.map((t) =>
-    '<div class="tile"><div class="label">' + esc(t.label) + '</div>' +
-    '<div class="value">' + esc(t.value) + '</div>' +
-    '<div class="sub">' + esc(t.sub) + "</div></div>").join("");
+    '<div class="tile"><div class="label"><span class="dot"></span>' + t.label + "</div>" +
+    '<div class="value">' + esc(t.value) + '</div><div class="delta">' + t.sub + "</div></div>").join("");
 
+  // Members table
+  document.getElementById("member-count").textContent = members.length ? "· " + members.length : "";
   const rows = document.getElementById("rows");
   if (!members.length) {
-    rows.innerHTML = '<tr><td colspan="9"><div class="empty">No reports yet. ' +
-      "Members submit with <code>gard fleet submit</code>.</div></td></tr>";
-    return;
+    rows.innerHTML = '<tr><td colspan="6"><div class="empty">No fleet reports yet.</div></td></tr>';
+  } else {
+    rows.innerHTML = members.map((m) => {
+      const st = memberState(m);
+      const details = [];
+      if ((m.new_check_ids || []).length)
+        details.push('<span class="alarm">✕ new: ' + esc(m.new_check_ids.join(", ")) + "</span>");
+      if ((m.resolved_check_ids || []).length)
+        details.push('<span class="ok">✓ resolved: ' + esc(m.resolved_check_ids.join(", ")) + "</span>");
+      const detailRow = details.length
+        ? '<tr class="drow"><td colspan="6"><div class="detail-lines">' + details.join("") + "</div></td></tr>"
+        : "";
+      return '<tr' + (details.length ? ' class="drow"' : "") + '><td><div class="who">' +
+        '<span class="avatar" style="background:' + avatarColor(m.member) + '">' + esc(initials(m.member)) + "</span>" +
+        '<span><span class="nm">' + esc(m.member) + '</span><br><span class="hs mono">' + esc(m.hostname) + "</span></span>" +
+        "</div></td>" +
+        "<td>" + (m.signature_valid
+          ? '<span class="sig-ok">✓ verified' + (m.trusted ? " · " + esc(m.trusted) : "") + "</span>"
+          : '<span class="sig-bad">✕ INVALID</span>') + "</td>" +
+        '<td class="num">' + esc(m.age_hours) + "h</td>" +
+        '<td class="num">' + esc(m.critical) + "</td>" +
+        '<td class="num">' + esc(m.high) + "</td>" +
+        '<td><span class="pill ' + st.cls + '">' + st.icon + " " + st.label + "</span></td></tr>" + detailRow;
+    }).join("");
   }
-  rows.innerHTML = members.map((m) => {
-    const st = memberState(m);
-    const details = [];
+
+  // Findings matrix: members × union of check ids, worst severity per cell
+  const checkIds = [...new Set(members.flatMap((m) => (m.checks || []).map((c) => c.id)))].sort();
+  const hm = document.getElementById("heatmap");
+  if (!members.length || !checkIds.length) {
+    hm.innerHTML = '<div class="rail-empty">No findings anywhere — the matrix is clear.</div>';
+  } else {
+    const rowsHtml = members.map((m) => {
+      const byId = Object.fromEntries((m.checks || []).map((c) => [c.id, c]));
+      const cells = checkIds.map((id) => {
+        const c = byId[id];
+        const sev = c ? c.severity : null;
+        const title = id + " — " + (c ? c.count + " finding(s), worst " + sev : "clear");
+        return '<span class="hm-cell' + (sev ? " sev-" + esc(sev) : "") + '" title="' + esc(title) + '"></span>';
+      }).join("");
+      return '<div class="hm-row"><span class="hm-name" title="' + esc(m.member) + '">' + esc(m.member) + "</span>" + cells + "</div>";
+    }).join("");
+    const axis = '<div class="hm-x">' + checkIds.map((id) =>
+      "<span title=\"" + esc(id) + "\">" + esc(id.replace(/-/g, "·").slice(0, 18)) + "</span>").join("") + "</div>";
+    hm.innerHTML = rowsHtml + axis;
+  }
+
+  // Suppressions rail
+  const supp = [];
+  for (const m of members) {
     for (const s of m.suppressions || []) {
       if (s.days_left < 0) continue;
-      const line = "suppression ‘" + esc(s.check_id) + "’ expires in " +
-        s.days_left + " day(s) — " + esc(s.reason);
-      details.push('<span class="' + (s.expiring_soon ? "warn" : "") + '">' +
-        (s.expiring_soon ? "⚠ " : "· ") + line + "</span>");
+      supp.push({ m: m.member, ...s });
     }
-    if ((m.new_check_ids || []).length)
-      details.push('<span class="alarm">✕ new since previous report: ' +
-        esc(m.new_check_ids.join(", ")) + "</span>");
-    if ((m.resolved_check_ids || []).length)
-      details.push('<span class="ok">✓ resolved since previous report: ' +
-        esc(m.resolved_check_ids.join(", ")) + "</span>");
+  }
+  supp.sort((a, b) => a.days_left - b.days_left);
+  document.getElementById("supp-list").innerHTML = supp.length
+    ? supp.map((s) =>
+        '<div class="event' + (s.expiring_soon ? " warn" : "") + '"><span class="bar"></span><div>' +
+        '<div class="t mono">' + esc(s.check_id) + "</div>" +
+        '<div class="d">' + esc(s.m) + " — " + esc(s.reason) + "</div></div>" +
+        '<span class="when">' + s.days_left + "d left</span></div>").join("")
+    : '<div class="rail-empty">No active suppressions. Clean policy.</div>';
 
-    const row =
-      '<tr class="member-row"><td><strong>' + esc(m.member) + "</strong></td>" +
-      '<td class="host">' + esc(m.hostname) + "</td>" +
-      '<td class="num">' + esc(m.age_hours) + "h</td>" +
-      "<td>" + (m.signature_valid ? "valid" : '<span class="alarm">INVALID</span>') + "</td>" +
-      '<td class="num">' + esc(m.critical) + "</td>" +
-      '<td class="num">' + esc(m.high) + "</td>" +
-      '<td class="num">' + esc(m.total_findings) + "</td>" +
-      "<td>" + (m.trusted ? esc(m.trusted) : '<span class="host">—</span>') + "</td>" +
-      '<td><span class="pill ' + st.cls + '">' + st.icon + " " + st.label + "</span></td></tr>";
-    const detailRow = details.length
-      ? '<tr class="detail-row"><td colspan="9"><div class="detail">' + details.join("") + "</div></td></tr>"
-      : "";
-    return row + detailRow;
-  }).join("");
+  // Activity rail
+  const acts = [];
+  for (const m of members) {
+    const st = memberState(m);
+    if (!m.signature_valid) acts.push({ cls: "alarm", t: "Invalid signature", d: m.member + " — report failed verification" });
+    if (m.stale) acts.push({ cls: "warn", t: "Report stale", d: m.member + " — last submit " + m.age_hours + "h ago" });
+    for (const id of m.new_check_ids || []) acts.push({ cls: "alarm", t: "New finding", d: m.member + " — " + id });
+    for (const id of m.resolved_check_ids || []) acts.push({ cls: "ok", t: "Resolved", d: m.member + " — " + id });
+    if (st.label === "PASS" && !(m.new_check_ids || []).length) acts.push({ cls: "ok", t: "Passing", d: m.member + " — clear to sign" });
+  }
+  document.getElementById("act-list").innerHTML = acts.length
+    ? acts.slice(0, 12).map((a) =>
+        '<div class="event ' + a.cls + '"><span class="bar"></span><div>' +
+        '<div class="t">' + esc(a.t) + '</div><div class="d">' + esc(a.d) + "</div></div></div>").join("")
+    : '<div class="rail-empty">No activity yet.</div>';
 }
 
 document.getElementById("themebtn").addEventListener("click", () => {
   const root = document.documentElement;
-  const dark = root.getAttribute("data-theme") === "dark" ||
-    (!root.getAttribute("data-theme") && matchMedia("(prefers-color-scheme: dark)").matches);
+  const dark = root.getAttribute("data-theme") !== "light";
   root.setAttribute("data-theme", dark ? "light" : "dark");
   try { localStorage.setItem("gard-theme", dark ? "light" : "dark"); } catch (e) {}
 });
@@ -278,7 +560,8 @@ if (DATA === null) {
         if (r.status === 401) {
           tokenForm.hidden = false;
           tokenErr.hidden = !token;
-          document.getElementById("banner").textContent = "Locked — enter the fleet access token.";
+          document.getElementById("hero-state").textContent = "Locked";
+          document.getElementById("hero-detail").textContent = "Enter the fleet access token to load status.";
           throw new Error("unauthorized");
         }
         tokenForm.hidden = true;
