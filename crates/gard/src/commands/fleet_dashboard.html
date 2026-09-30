@@ -161,7 +161,10 @@ button.ghost:focus-visible { outline: 2px solid var(--accent); outline-offset: 1
 .card {
   background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
   padding: 16px 18px; min-width: 0;
+  transition: border-color 0.15s;
 }
+.card:hover { border-color: var(--line-2); }
+::selection { background: var(--accent-wash); }
 .card h2 { font-size: 13px; font-weight: 700; margin: 0 0 12px; letter-spacing: -0.01em; }
 .card h2 .count { color: var(--muted); font-weight: 600; }
 
@@ -179,6 +182,20 @@ button.ghost:focus-visible { outline: 2px solid var(--accent); outline-offset: 1
 }
 .hero .state { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; margin: 0; }
 .hero .detail { color: var(--ink-2); font-size: 13px; max-width: 46ch; }
+.hero-copy { min-width: 0; }
+.ring {
+  --ring-color: var(--good);
+  width: 92px; height: 92px; border-radius: 50%; flex: none;
+  background: conic-gradient(var(--ring-color) calc(var(--pct) * 1%), rgba(127, 127, 127, 0.18) 0);
+  display: grid; place-items: center;
+  transition: background 0.4s;
+}
+.ring-in {
+  width: 72px; height: 72px; border-radius: 50%; background: var(--panel);
+  display: grid; place-items: center; align-content: center; text-align: center;
+}
+.ring-in b { font-size: 19px; font-weight: 800; letter-spacing: -0.02em; line-height: 1; }
+.ring-in i { font-style: normal; font-size: 9.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
 .hero .badge {
   margin-left: auto; align-self: flex-start;
   border-radius: 999px; padding: 6px 14px; font-weight: 800; font-size: 13px;
@@ -224,6 +241,14 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .pill.fail, .pill.badsig { color: var(--critical); background: var(--critical-wash); }
 .sig-ok { color: var(--ink-2); font-size: 12px; }
 .sig-bad { color: var(--critical); font-weight: 800; font-size: 12px; }
+.sevwrap { display: flex; align-items: center; gap: 8px; min-width: 110px; }
+.sevbar { flex: 1; height: 8px; border-radius: 4px; background: var(--cell-0); display: flex; gap: 2px; overflow: hidden; }
+.sg { height: 100%; border-radius: 2px; min-width: 3px; }
+.sg.crit { background: var(--critical); }
+.sg.high { background: var(--serious); }
+.sg.rest { background: var(--accent); opacity: 0.55; }
+.sevnum { font-size: 11.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; min-width: 2ch; text-align: right; }
+.sev-clear { font-size: 11.5px; color: var(--good); font-weight: 700; }
 .detail-lines { display: grid; gap: 3px; font-size: 12px; color: var(--ink-2); }
 .detail-lines .warn { color: var(--serious); font-weight: 600; }
 .detail-lines .alarm { color: var(--critical); font-weight: 600; }
@@ -237,7 +262,9 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .hm-row { display: flex; gap: 4px; align-items: center; }
 .hm-name { width: 92px; flex: none; font-size: 11.5px; color: var(--ink-2); font-weight: 600;
            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.hm-cell { width: 26px; height: 26px; border-radius: 6px; flex: none; background: var(--cell-0); }
+.hm-cell { width: 26px; height: 26px; border-radius: 6px; flex: none; background: var(--cell-0);
+           transition: transform 0.1s; }
+.hm-cell:hover { transform: scale(1.18); }
 .hm-cell.sev-INFO, .hm-cell.sev-LOW { background: var(--accent-wash); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent) 35%, transparent); }
 .hm-cell.sev-MEDIUM { background: var(--warning-wash); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--warning) 45%, transparent); }
 .hm-cell.sev-HIGH { background: var(--serious-wash); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--serious) 50%, transparent); }
@@ -275,6 +302,14 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 }
 .gate-err { color: var(--critical); font-size: 12px; }
 .empty { padding: 26px 0; color: var(--ink-2); font-size: 13px; }
+.howto ol { margin: 0; padding-left: 18px; display: grid; gap: 7px; font-size: 12.5px; color: var(--ink-2); }
+.howto .mono { font-size: 11.5px; color: var(--accent-ink); background: var(--accent-wash);
+               padding: 1px 6px; border-radius: 5px; }
+.page-foot {
+  display: flex; flex-wrap: wrap; gap: 6px 20px; justify-content: space-between;
+  margin-top: 22px; padding-top: 14px; border-top: 1px solid var(--line);
+  font-size: 12px; color: var(--muted);
+}
 </style>
 </head>
 <body>
@@ -325,7 +360,10 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
     <div class="grid">
       <div class="col">
         <section class="hero" id="hero">
-          <div>
+          <div class="ring" id="ring" style="--pct:0">
+            <span class="ring-in"><b id="ring-num">—</b><i>passing</i></span>
+          </div>
+          <div class="hero-copy">
             <p class="state" id="hero-state">Loading fleet status…</p>
             <div class="detail" id="hero-detail">Waiting for the first status response.</div>
           </div>
@@ -341,7 +379,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
               <thead>
                 <tr>
                   <th>Member</th><th>Signature</th><th class="num">Age</th>
-                  <th class="num">Crit</th><th class="num">High</th><th>Status</th>
+                  <th>Findings</th><th>Status</th>
                 </tr>
               </thead>
               <tbody id="rows"></tbody>
@@ -362,7 +400,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
         </section>
       </div>
 
-      <div class="col">
+      <div class="col rail">
         <section class="card" id="suppressions">
           <h2>Suppressions</h2>
           <div id="supp-list"></div>
@@ -371,8 +409,22 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
           <h2>Changes since last submissions</h2>
           <div id="act-list"></div>
         </section>
+        <section class="card howto">
+          <h2>How this fleet works</h2>
+          <ol>
+            <li><span class="mono">gard scan</span> audits each machine and signs the report (Ed25519).</li>
+            <li><span class="mono">gard fleet submit</span> sends it here; the server verifies the signature and the team roster before accepting.</li>
+            <li>This page recomputes from the latest verified reports every 30&nbsp;seconds.</li>
+            <li>Before a ceremony: <span class="mono">gard attest</span> + co-signers run <span class="mono">gard verify</span>.</li>
+          </ol>
+        </section>
       </div>
     </div>
+
+    <footer class="page-foot">
+      <span><strong>Gard Fleet</strong> — self-hosted edition · free &amp; open source</span>
+      <span>Managed hosting with history &amp; alerting is on the v0.4 roadmap</span>
+    </footer>
   </main>
 </div>
 
@@ -405,10 +457,17 @@ function render() {
   document.getElementById("updated").innerHTML =
     '<span class="livedot"></span>Updated ' + new Date(DATA.generated_at).toLocaleTimeString();
 
-  // Hero
+  // Hero + health ring
   const failing = members.filter((m) => !memberState(m).cls.match(/^pass$/)).length;
   const badge = document.getElementById("hero-badge");
   badge.hidden = false;
+  const ring = document.getElementById("ring");
+  const passingCount = members.length - failing;
+  const pct = members.length ? Math.round((passingCount / members.length) * 100) : 0;
+  ring.style.setProperty("--pct", pct);
+  ring.style.setProperty("--ring-color",
+    pct === 100 ? "var(--good)" : pct >= 50 ? "var(--warning)" : "var(--critical)");
+  document.getElementById("ring-num").textContent = members.length ? pct + "%" : "—";
   if (members.length === 0) {
     document.getElementById("hero-state").textContent = "No reports yet";
     document.getElementById("hero-detail").innerHTML =
@@ -456,8 +515,9 @@ function render() {
   document.getElementById("member-count").textContent = members.length ? "· " + members.length : "";
   const rows = document.getElementById("rows");
   if (!members.length) {
-    rows.innerHTML = '<tr><td colspan="6"><div class="empty">No fleet reports yet.</div></td></tr>';
+    rows.innerHTML = '<tr><td colspan="5"><div class="empty">No fleet reports yet.</div></td></tr>';
   } else {
+    const maxFindings = Math.max(1, ...members.map((m) => m.total_findings));
     rows.innerHTML = members.map((m) => {
       const st = memberState(m);
       const details = [];
@@ -466,8 +526,21 @@ function render() {
       if ((m.resolved_check_ids || []).length)
         details.push('<span class="ok">✓ resolved: ' + esc(m.resolved_check_ids.join(", ")) + "</span>");
       const detailRow = details.length
-        ? '<tr class="drow"><td colspan="6"><div class="detail-lines">' + details.join("") + "</div></td></tr>"
+        ? '<tr class="drow"><td colspan="5"><div class="detail-lines">' + details.join("") + "</div></td></tr>"
         : "";
+
+      // Severity composition bar, scaled to the busiest member
+      const rest = Math.max(0, m.total_findings - m.critical - m.high);
+      const scale = (n) => (n / maxFindings) * 100;
+      const sevbar = m.total_findings === 0
+        ? '<span class="sev-clear">clear</span>'
+        : '<div class="sevwrap"><div class="sevbar" title="' +
+          m.critical + " critical · " + m.high + " high · " + rest + ' other">' +
+          (m.critical ? '<span class="sg crit" style="width:' + scale(m.critical) + '%"></span>' : "") +
+          (m.high ? '<span class="sg high" style="width:' + scale(m.high) + '%"></span>' : "") +
+          (rest ? '<span class="sg rest" style="width:' + scale(rest) + '%"></span>' : "") +
+          '</div><span class="sevnum">' + m.total_findings + "</span></div>";
+
       return '<tr' + (details.length ? ' class="drow"' : "") + '><td><div class="who">' +
         '<span class="avatar" style="background:' + avatarColor(m.member) + '">' + esc(initials(m.member)) + "</span>" +
         '<span><span class="nm">' + esc(m.member) + '</span><br><span class="hs mono">' + esc(m.hostname) + "</span></span>" +
@@ -476,8 +549,7 @@ function render() {
           ? '<span class="sig-ok">✓ verified' + (m.trusted ? " · " + esc(m.trusted) : "") + "</span>"
           : '<span class="sig-bad">✕ INVALID</span>') + "</td>" +
         '<td class="num">' + esc(m.age_hours) + "h</td>" +
-        '<td class="num">' + esc(m.critical) + "</td>" +
-        '<td class="num">' + esc(m.high) + "</td>" +
+        "<td>" + sevbar + "</td>" +
         '<td><span class="pill ' + st.cls + '">' + st.icon + " " + st.label + "</span></td></tr>" + detailRow;
     }).join("");
   }
