@@ -45,7 +45,19 @@ pub async fn execute(subcommand: FleetSubcommand) -> Result<i32> {
             bind,
             token,
             max_age_hours,
-        } => serve(&policy, dir, port, &bind, token, max_age_hours).await,
+        } => {
+            serve(
+                &policy,
+                ServeOptions {
+                    dir,
+                    port,
+                    bind,
+                    token,
+                    max_age_hours,
+                },
+            )
+            .await
+        },
     }
 }
 
@@ -339,15 +351,26 @@ const MAX_BODY_BYTES: usize = 4 * 1024 * 1024;
 /// Serve the dashboard, live status API, and submission API. Fleet state
 /// is recomputed from the directory on every API request, so the page
 /// stays current without regeneration.
-async fn serve(
-    policy: &Policy,
+/// Options for the fleet server
+struct ServeOptions {
     dir: Option<String>,
     port: u16,
-    bind: &str,
+    bind: String,
     token: Option<String>,
     max_age_hours: Option<u64>,
-) -> Result<i32> {
+}
+
+async fn serve(policy: &Policy, options: ServeOptions) -> Result<i32> {
     use tokio::io::AsyncWriteExt;
+
+    let ServeOptions {
+        dir,
+        port,
+        bind,
+        token,
+        max_age_hours,
+    } = options;
+    let bind = bind.as_str();
 
     let fleet_dir = resolve_fleet_dir(policy, dir)?;
     fs::create_dir_all(&fleet_dir)?;
