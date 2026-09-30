@@ -70,6 +70,8 @@ impl Default for Policy {
             hardware_wallet: Default::default(),
             solana: Default::default(),
             nonce: Default::default(),
+            team: Default::default(),
+            fleet: Default::default(),
             metadata: Default::default(),
         }
     }

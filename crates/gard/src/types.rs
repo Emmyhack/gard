@@ -277,9 +277,44 @@ pub struct Policy {
     #[serde(default)]
     pub nonce: NoncePolicy,
 
+    /// Team roster of trusted signer keys
+    #[serde(default)]
+    pub team: TeamPolicy,
+
+    /// Fleet compliance configuration
+    #[serde(default)]
+    pub fleet: FleetPolicy,
+
     /// Metadata
     #[serde(default)]
     pub metadata: PolicyMetadata,
+}
+
+/// Trusted signer roster for attestation and fleet verification
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct TeamPolicy {
+    #[serde(default)]
+    pub signers: Vec<TeamSigner>,
+}
+
+/// A team member's registered signing identity
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TeamSigner {
+    /// Member name
+    pub name: String,
+
+    /// Ed25519 public key (hex, from 'gard report --export-key')
+    pub public_key: String,
+}
+
+/// Fleet compliance configuration
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct FleetPolicy {
+    /// Shared directory where members submit signed reports
+    pub dir: Option<String>,
+
+    /// Reports older than this are flagged stale (default 24)
+    pub max_age_hours: Option<u64>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

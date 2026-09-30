@@ -8,7 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Placeholder for future features
+- `gard attest`: signed, time-boxed machine-posture attestations bound to a
+  ceremony id; refused when blocking findings exist (no override)
+- `gard verify`: verifies a co-signer's attestation (signature, freshness,
+  ceremony binding, posture) and matches the key against the team roster
+- `gard fleet submit` / `gard fleet status`: file-based team compliance over
+  a shared directory, with signature verification, staleness flagging, and
+  tamper detection
+- `gard team add/list/remove`: trusted signer roster stored in policy.toml,
+  so distributing one policy file distributes the trust anchors
+- `[team]` and `[fleet]` policy sections
 
 ### Changed
 - Placeholder for future improvements
