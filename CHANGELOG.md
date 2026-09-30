@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `gard fleet submit` / `gard fleet status`: file-based team compliance over
   a shared directory, with signature verification, staleness flagging, and
   tamper detection
+- Fleet change detection: each submission archives the previous report, and
+  `fleet status` shows findings new or resolved since a member's last submit
+- Suppression visibility: scan reports embed active suppressions, and
+  `fleet status` warns when one expires within 7 days
 - `gard team add/list/remove`: trusted signer roster stored in policy.toml,
   so distributing one policy file distributes the trust anchors
 - `[team]` and `[fleet]` policy sections

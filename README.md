@@ -131,8 +131,10 @@ gard fleet status --dir ~/team/gard-fleet     # anyone
 ```
 
 `fleet status` verifies every report's signature, flags stale or failing
-members, and exits non-zero unless the whole fleet is green. Set `[fleet]
-dir` in policy to drop the `--dir` flag.
+members, warns on suppressions expiring within 7 days, shows findings that
+are new or resolved since each member's previous submission, and exits
+non-zero unless the whole fleet is green. Set `[fleet] dir` in policy to
+drop the `--dir` flag.
 
 ### Initialize Policy
 
