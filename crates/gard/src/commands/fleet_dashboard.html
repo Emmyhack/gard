@@ -124,7 +124,7 @@ button.theme:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 1p
     <span class="meta" id="generated"></span>
     <button class="theme" id="themebtn" type="button">Theme</button>
   </header>
-  <div class="banner" id="banner"></div>
+  <div class="banner" id="banner">Loading fleet status…</div>
   <section class="tiles" id="tiles"></section>
   <section class="tablewrap">
     <table aria-describedby="generated">
@@ -144,7 +144,9 @@ button.theme:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 1p
   </footer>
 </main>
 <script>
-const DATA = __GARD_DATA__;
+// Static mode embeds the payload; serve mode replaces it with null and
+// the page polls the live API instead.
+let DATA = __GARD_DATA__;
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) =>
   ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -172,9 +174,10 @@ function render() {
 
   const banner = document.getElementById("banner");
   if (DATA.all_green) {
+    banner.className = "banner";
     banner.textContent = "✓ Fleet green — all members passing and fresh.";
   } else {
-    banner.classList.add("bad");
+    banner.className = "banner bad";
     banner.textContent = "✕ Fleet not green — review the members below.";
   }
 
@@ -241,7 +244,17 @@ try {
   if (saved) document.documentElement.setAttribute("data-theme", saved);
 } catch (e) {}
 
-render();
+if (DATA === null) {
+  const poll = () =>
+    fetch("api/status")
+      .then((r) => r.json())
+      .then((d) => { DATA = d; render(); })
+      .catch(() => {});
+  poll();
+  setInterval(poll, 30000);
+} else {
+  render();
+}
 </script>
 </body>
 </html>

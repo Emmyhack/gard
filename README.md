@@ -282,6 +282,7 @@ File-based team compliance over a shared directory.
 gard fleet submit [--dir <PATH>]
 gard fleet status [--dir <PATH>] [--max-age-hours <N>] [--json]
 gard fleet dashboard [--dir <PATH>] [--max-age-hours <N>] [-o <PATH>]
+gard fleet serve [--dir <PATH>] [--port <PORT>] [--max-age-hours <N>]
 ```
 
 `submit` runs a fresh scan and writes the signed report as
@@ -295,6 +296,13 @@ dependencies. Once generated, every `fleet submit` refreshes it, and the
 page reloads itself every 5 minutes — so serving the fleet directory (for
 example with GitHub Pages on the shared repo) gives the team a URL to
 check daily without running any server.
+
+`serve` runs the same dashboard as a live web app at
+`http://127.0.0.1:8787/` (default port), backed by a JSON API at
+`/api/status` that recomputes fleet state from the directory on every
+request; the page polls it every 30 seconds. It binds to localhost only,
+by design — pair it with the shared fleet directory (synced folder or git
+repo) so each member's local dashboard shows the whole team live.
 
 ### gard team
 

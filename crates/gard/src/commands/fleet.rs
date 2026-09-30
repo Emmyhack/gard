@@ -39,6 +39,11 @@ pub async fn execute(subcommand: FleetSubcommand) -> Result<i32> {
             max_age_hours,
             output,
         } => dashboard(&policy, dir, max_age_hours, output),
+        FleetSubcommand::Serve {
+            dir,
+            port,
+            max_age_hours,
+        } => serve(&policy, dir, port, max_age_hours).await,
     }
 }
 
@@ -256,6 +261,125 @@ fn dashboard(
     }
 
     Ok(0)
+}
+
+/// Serve the dashboard and a live status API on localhost. Fleet state
+/// is recomputed from the directory on every API request, so the page
+/// stays current without regeneration.
+async fn serve(
+    policy: &Policy,
+    dir: Option<String>,
+    port: u16,
+    max_age_hours: Option<u64>,
+) -> Result<i32> {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+    let fleet_dir = resolve_fleet_dir(policy, dir)?;
+    if !fleet_dir.exists() {
+        return Err(GardError::ConfigurationError {
+            path: fleet_dir.to_string_lossy().to_string(),
+            reason: "Fleet directory does not exist".to_string(),
+        });
+    }
+
+    let max_age = max_age_hours
+        .or(policy.fleet.max_age_hours)
+        .unwrap_or(DEFAULT_MAX_AGE_HOURS) as i64;
+
+    // Localhost only, deliberately: a signing-team compliance view should
+    // never be exposed as a network service by default.
+    let listener = tokio::net::TcpListener::bind(("127.0.0.1", port))
+        .await
+        .map_err(|e| GardError::NetworkError {
+            endpoint: format!("127.0.0.1:{}", port),
+            reason: e.to_string(),
+        })?;
+
+    println!("Fleet dashboard: http://127.0.0.1:{}/", port);
+    println!("Live status API: http://127.0.0.1:{}/api/status", port);
+    println!("Watching {} — Ctrl-C to stop.", fleet_dir.display());
+
+    loop {
+        let (mut stream, _) = match listener.accept().await {
+            Ok(conn) => conn,
+            Err(_) => continue,
+        };
+        let fleet_dir = fleet_dir.clone();
+
+        tokio::spawn(async move {
+            let mut buf = [0u8; 4096];
+            let n = match stream.read(&mut buf).await {
+                Ok(n) if n > 0 => n,
+                _ => return,
+            };
+            let request = String::from_utf8_lossy(&buf[..n]);
+            let path = request
+                .lines()
+                .next()
+                .and_then(|line| line.split_whitespace().nth(1))
+                .unwrap_or("/")
+                .to_string();
+
+            // Policy reloaded per request so roster/config edits apply live
+            let policy = config::load_policy(None).unwrap_or_default();
+            let max_age = policy
+                .fleet
+                .max_age_hours
+                .map(|h| h as i64)
+                .unwrap_or(max_age);
+            let response = respond(&path, &policy, &fleet_dir, max_age);
+            let _ = stream.write_all(response.as_bytes()).await;
+            let _ = stream.shutdown().await;
+        });
+    }
+}
+
+/// Route an HTTP request path to a full HTTP/1.1 response
+fn respond(path: &str, policy: &Policy, fleet_dir: &Path, max_age: i64) -> String {
+    match path {
+        "/" | "/index.html" => {
+            let html = include_str!("fleet_dashboard.html")
+                .replace("__GARD_DATA__", "null")
+                // Live mode polls the API; a full page reload is unnecessary
+                .replace("<meta http-equiv=\"refresh\" content=\"300\">\n", "");
+            http_response("200 OK", "text/html; charset=utf-8", &html)
+        },
+        "/api/status" => match collect_members(policy, fleet_dir, max_age) {
+            Ok(members) => {
+                let all_green = !members.is_empty()
+                    && members
+                        .iter()
+                        .all(|m| m.signature_valid && m.preflight_passing && !m.stale);
+                let payload = serde_json::json!({
+                    "generated_at": chrono::Utc::now(),
+                    "max_age_hours": max_age,
+                    "all_green": all_green,
+                    "members": members,
+                });
+                http_response(
+                    "200 OK",
+                    "application/json",
+                    &serde_json::to_string(&payload).unwrap_or_else(|_| "{}".to_string()),
+                )
+            },
+            Err(e) => http_response(
+                "500 Internal Server Error",
+                "application/json",
+                &serde_json::json!({ "error": e.to_string() }).to_string(),
+            ),
+        },
+        _ => http_response("404 Not Found", "text/plain; charset=utf-8", "not found"),
+    }
+}
+
+fn http_response(status: &str, content_type: &str, body: &str) -> String {
+    format!(
+        "HTTP/1.1 {}\r\nContent-Type: {}\r\nContent-Length: {}\r\nCache-Control: no-store\r\nConnection: close\r\n\r\n{}",
+        status,
+        content_type,
+        body.len(),
+        body
+    )
 }
 
 /// Render the fleet view into the self-contained HTML template
@@ -535,6 +659,32 @@ mod tests {
         assert!(html.contains("ssh-key-hygiene") || html.contains("\"member\""));
         assert!(html.contains("Gard Fleet"));
         assert!(!html.contains("__GARD_DATA__"));
+    }
+
+    #[test]
+    fn test_respond_routes() {
+        let policy = crate::types::Policy::default();
+        let dir = std::env::temp_dir();
+
+        let page = respond("/", &policy, &dir, 24);
+        assert!(page.starts_with("HTTP/1.1 200 OK"));
+        assert!(page.contains("Gard Fleet"));
+        assert!(page.contains("let DATA = null;"));
+        assert!(!page.contains("http-equiv=\"refresh\""));
+
+        let api = respond("/api/status", &policy, &dir, 24);
+        assert!(api.starts_with("HTTP/1.1 200 OK"));
+        assert!(api.contains("\"members\""));
+
+        let missing = respond("/nope", &policy, &dir, 24);
+        assert!(missing.starts_with("HTTP/1.1 404"));
+    }
+
+    #[test]
+    fn test_http_response_content_length() {
+        let r = http_response("200 OK", "text/plain", "abc");
+        assert!(r.contains("Content-Length: 3"));
+        assert!(r.ends_with("abc"));
     }
 
     #[test]

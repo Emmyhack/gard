@@ -137,6 +137,21 @@ pub enum FleetSubcommand {
         output: Option<String>,
     },
 
+    /// Serve a live fleet dashboard over HTTP on localhost
+    Serve {
+        /// Fleet directory (defaults to [fleet] dir in policy)
+        #[arg(long)]
+        dir: Option<String>,
+
+        /// Port to listen on (localhost only)
+        #[arg(long, default_value = "8787")]
+        port: u16,
+
+        /// Reports older than this many hours are flagged stale
+        #[arg(long)]
+        max_age_hours: Option<u64>,
+    },
+
     /// Show compliance status for all submitted fleet reports
     Status {
         /// Fleet directory (defaults to [fleet] dir in policy)
