@@ -123,12 +123,25 @@ body {
   color: var(--muted); margin: 14px 8px 6px; font-weight: 700;
 }
 @media (max-width: 860px) { .nav-label { display: none; } .brand { margin-bottom: 0; margin-right: 10px; } }
-.nav a {
-  display: block; padding: 8px 10px; border-radius: 8px;
-  color: var(--ink-2); text-decoration: none; font-weight: 600; font-size: 13.5px;
+.nav { display: grid; gap: 2px; }
+.nav button {
+  display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
+  padding: 8px 10px; border: none; border-radius: 8px; background: transparent;
+  color: var(--ink-2); font: inherit; font-weight: 600; font-size: 13.5px; cursor: pointer;
 }
-.nav a:hover { background: var(--panel-2); color: var(--ink); }
-.nav a.active { background: var(--accent-wash); color: var(--accent-ink); }
+.nav button:hover { background: var(--panel-2); color: var(--ink); }
+.nav button.active { background: var(--accent-wash); color: var(--accent-ink); }
+.nav button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.navnum {
+  margin-left: auto; font-size: 10.5px; font-weight: 800; color: var(--muted);
+  background: var(--cell-0); border-radius: 999px; padding: 1px 7px;
+  font-variant-numeric: tabular-nums;
+}
+.nav button.active .navnum { color: var(--accent-ink); }
+@media (max-width: 860px) {
+  .nav { display: flex; flex-wrap: wrap; gap: 4px; }
+  .nav button { width: auto; }
+}
 .side-foot { margin-top: auto; padding: 10px; font-size: 11.5px; color: var(--muted); }
 @media (max-width: 860px) { .side-foot { display: none; } }
 
@@ -149,9 +162,8 @@ button.ghost {
 button.ghost:hover { color: var(--ink); border-color: var(--muted); }
 button.ghost:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
-.grid { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr) 300px; }
-@media (max-width: 1100px) { .grid { grid-template-columns: 1fr; } }
-.col { display: grid; gap: 14px; align-content: start; min-width: 0; }
+.view { display: grid; gap: 14px; }
+[hidden] { display: none !important; }
 
 .card {
   background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
@@ -248,23 +260,37 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 11.5px; color: var(--ink-2); margin-bottom: 12px; }
 .legend span { display: inline-flex; align-items: center; gap: 6px; }
 .lg { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
-.hm { display: grid; gap: 4px; overflow-x: auto; padding-bottom: 4px; }
-.hm-row { display: flex; gap: 4px; align-items: center; }
-.hm-name { width: 92px; flex: none; font-size: 11.5px; color: var(--ink-2); font-weight: 600;
-           white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.hm-cell { width: 26px; height: 26px; border-radius: 6px; flex: none; background: var(--cell-0);
-           transition: transform 0.1s; }
-.hm-cell:hover { transform: scale(1.18); }
-.hm-cell.sev-INFO, .hm-cell.sev-LOW { background: var(--accent-wash); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent) 35%, transparent); }
-.hm-cell.sev-MEDIUM { background: var(--warning-wash); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--warning) 45%, transparent); }
-.hm-cell.sev-HIGH { background: var(--serious-wash); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--serious) 50%, transparent); }
-.hm-cell.sev-CRITICAL { background: var(--critical-wash); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--critical) 55%, transparent); }
-.hm-x { display: flex; gap: 4px; margin-left: 96px; }
-.hm-x span {
-  width: 26px; flex: none; font-size: 9.5px; color: var(--muted);
-  writing-mode: vertical-rl; transform: rotate(180deg);
-  max-height: 86px; overflow: hidden; white-space: nowrap;
+.mx { display: grid; gap: 7px; overflow-x: auto; padding-bottom: 4px; }
+.mx-row {
+  display: grid; gap: 7px; align-items: center;
+  grid-template-columns: minmax(220px, 300px) repeat(var(--mcols, 1), minmax(76px, 110px));
 }
+.mx-label { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.mx-label .mono { font-size: 12px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mx-worst {
+  flex: none; font-size: 9px; font-weight: 800; letter-spacing: 0.05em;
+  padding: 2px 7px; border-radius: 999px;
+}
+.mx-member {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0;
+  font-size: 11.5px; font-weight: 600; color: var(--ink-2);
+}
+.mx-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.avatar.sm { width: 24px; height: 24px; font-size: 10px; }
+.mx-cell {
+  height: 38px; border-radius: 9px; display: grid; place-items: center;
+  font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums;
+  background: var(--cell-0); color: var(--muted);
+}
+.mx-cell.sev-INFO, .mx-cell.sev-LOW, .mx-worst.sev-INFO, .mx-worst.sev-LOW
+  { background: var(--accent-wash); color: var(--accent-ink); box-shadow: inset 0 0 0 1.5px var(--accent); }
+.mx-cell.sev-MEDIUM, .mx-worst.sev-MEDIUM
+  { background: var(--warning-wash); color: var(--warning); box-shadow: inset 0 0 0 1.5px var(--warning); }
+.mx-cell.sev-HIGH, .mx-worst.sev-HIGH
+  { background: var(--serious-wash); color: var(--serious); box-shadow: inset 0 0 0 1.5px var(--serious); }
+.mx-cell.sev-CRITICAL, .mx-worst.sev-CRITICAL
+  { background: var(--critical-wash); color: var(--critical); box-shadow: inset 0 0 0 1.5px var(--critical); }
+.lg-clear { background: var(--cell-0); box-shadow: inset 0 0 0 1px var(--line-2); }
 
 /* ---------- Rail ---------- */
 .event { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
@@ -318,11 +344,11 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
     </div>
     <div class="nav-label">Fleet</div>
     <nav class="nav">
-      <a href="#overview" class="active">Overview</a>
-      <a href="#members">Members</a>
-      <a href="#matrix">Findings matrix</a>
-      <a href="#suppressions">Suppressions</a>
-      <a href="#activity">Activity</a>
+      <button type="button" data-view="overview" class="active">Overview</button>
+      <button type="button" data-view="members">Members <span class="navnum" id="nav-members"></span></button>
+      <button type="button" data-view="findings">Findings matrix <span class="navnum" id="nav-findings"></span></button>
+      <button type="button" data-view="suppressions">Suppressions <span class="navnum" id="nav-supp"></span></button>
+      <button type="button" data-view="activity">Activity <span class="navnum" id="nav-act"></span></button>
     </nav>
     <div class="side-foot">
       Signed reports · Ed25519 verified<br>
@@ -331,10 +357,10 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   </aside>
 
   <main class="main">
-    <div class="topbar" id="overview">
+    <div class="topbar">
       <div>
-        <h1>Fleet overview</h1>
-        <div class="sub">Machine posture across the signing team</div>
+        <h1 id="view-title">Fleet overview</h1>
+        <div class="sub" id="view-sub">Machine posture across the signing team</div>
       </div>
       <div class="right">
         <span class="updated" id="updated"><span class="livedot"></span>connecting…</span>
@@ -351,73 +377,84 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
       <span class="gate-err" id="tokenerr" hidden>Token rejected — check with your fleet admin.</span>
     </form>
 
-    <div class="grid">
-      <div class="col">
-        <section class="hero" id="hero">
-          <div class="ring" id="ring">
-            <svg viewBox="0 0 92 92" width="92" height="92" aria-hidden="true">
-              <circle class="ring-track" cx="46" cy="46" r="40"></circle>
-              <circle class="ring-arc" id="ring-arc" cx="46" cy="46" r="40"></circle>
-            </svg>
-            <span class="ring-in"><b id="ring-num">—</b><i>passing</i></span>
-          </div>
-          <div class="hero-copy">
-            <p class="state" id="hero-state">Loading fleet status…</p>
-            <div class="detail" id="hero-detail">Waiting for the first status response.</div>
-          </div>
-          <span class="badge ok" id="hero-badge" hidden></span>
-        </section>
+    <section class="view" data-view="overview">
+      <section class="hero" id="hero">
+        <div class="ring" id="ring">
+          <svg viewBox="0 0 92 92" width="92" height="92" aria-hidden="true">
+            <circle class="ring-track" cx="46" cy="46" r="40"></circle>
+            <circle class="ring-arc" id="ring-arc" cx="46" cy="46" r="40"></circle>
+          </svg>
+          <span class="ring-in"><b id="ring-num">&#8212;</b><i>passing</i></span>
+        </div>
+        <div class="hero-copy">
+          <p class="state" id="hero-state">Loading fleet status&#8230;</p>
+          <div class="detail" id="hero-detail">Waiting for the first status response.</div>
+        </div>
+        <span class="badge ok" id="hero-badge" hidden></span>
+      </section>
 
-        <section class="tiles" id="tiles"></section>
+      <section class="tiles" id="tiles"></section>
 
-        <section class="card" id="members">
-          <h2>Members <span class="count" id="member-count"></span></h2>
-          <div class="tscroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>Member</th><th>Signature</th><th class="num">Age</th>
-                  <th>Findings</th><th>Status</th>
-                </tr>
-              </thead>
-              <tbody id="rows"></tbody>
-            </table>
-          </div>
-        </section>
+      <section class="card">
+        <h2>Needs attention</h2>
+        <div id="attn-list"></div>
+      </section>
 
-        <section class="card" id="matrix">
-          <h2>Findings matrix <span class="count">worst severity per member × check</span></h2>
-          <div class="legend">
-            <span><span class="lg" style="background:var(--cell-0)"></span> Clear</span>
-            <span><span class="lg" style="background:var(--accent-wash)"></span> Low</span>
-            <span><span class="lg" style="background:var(--warning-wash)"></span> Medium</span>
-            <span><span class="lg" style="background:var(--serious-wash)"></span> High</span>
-            <span><span class="lg" style="background:var(--critical-wash)"></span> Critical</span>
-          </div>
-          <div class="hm" id="heatmap"></div>
-        </section>
-      </div>
+      <section class="card howto">
+        <h2>How this fleet works</h2>
+        <ol>
+          <li><span class="mono">gard scan</span> audits each machine and signs the report (Ed25519).</li>
+          <li><span class="mono">gard fleet submit</span> sends it here; the server verifies the signature and the team roster before accepting.</li>
+          <li>This page recomputes from the latest verified reports every 30&nbsp;seconds.</li>
+          <li>Before a ceremony: <span class="mono">gard attest</span> + co-signers run <span class="mono">gard verify</span>.</li>
+        </ol>
+      </section>
+    </section>
 
-      <div class="col rail">
-        <section class="card" id="suppressions">
-          <h2>Suppressions</h2>
-          <div id="supp-list"></div>
-        </section>
-        <section class="card" id="activity">
-          <h2>Changes since last submissions</h2>
-          <div id="act-list"></div>
-        </section>
-        <section class="card howto">
-          <h2>How this fleet works</h2>
-          <ol>
-            <li><span class="mono">gard scan</span> audits each machine and signs the report (Ed25519).</li>
-            <li><span class="mono">gard fleet submit</span> sends it here; the server verifies the signature and the team roster before accepting.</li>
-            <li>This page recomputes from the latest verified reports every 30&nbsp;seconds.</li>
-            <li>Before a ceremony: <span class="mono">gard attest</span> + co-signers run <span class="mono">gard verify</span>.</li>
-          </ol>
-        </section>
-      </div>
-    </div>
+    <section class="view" data-view="members" hidden>
+      <section class="card" id="members">
+        <h2>Members <span class="count" id="member-count"></span></h2>
+        <div class="tscroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Member</th><th>Signature</th><th class="num">Age</th>
+                <th>Findings</th><th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <section class="view" data-view="findings" hidden>
+      <section class="card" id="matrix">
+        <h2>Findings matrix <span class="count">worst severity per check &#215; member</span></h2>
+        <div class="legend">
+          <span><span class="lg lg-clear"></span> Clear</span>
+          <span><span class="lg" style="background:var(--accent)"></span> Low</span>
+          <span><span class="lg" style="background:var(--warning)"></span> Medium</span>
+          <span><span class="lg" style="background:var(--serious)"></span> High</span>
+          <span><span class="lg" style="background:var(--critical)"></span> Critical</span>
+        </div>
+        <div class="mx" id="heatmap"></div>
+      </section>
+    </section>
+
+    <section class="view" data-view="suppressions" hidden>
+      <section class="card" id="suppressions">
+        <h2>Suppressions</h2>
+        <div id="supp-list"></div>
+      </section>
+    </section>
+
+    <section class="view" data-view="activity" hidden>
+      <section class="card" id="activity">
+        <h2>Changes since last submissions</h2>
+        <div id="act-list"></div>
+      </section>
+    </section>
 
     <footer class="page-foot">
       <span><strong>Gard Fleet</strong> — self-hosted edition · free &amp; open source</span>
@@ -554,28 +591,71 @@ function render() {
     }).join("");
   }
 
-  // Findings matrix: members × union of check ids, worst severity per cell
-  const checkIds = [...new Set(members.flatMap((m) => (m.checks || []).map((c) => c.id)))].sort();
+  // Findings matrix: one readable row per check, one column per member.
+  // Each row leads with the fleet-wide worst severity for that check.
+  const SEV_RANK = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1, INFO: 1 };
+  const checkIds = [...new Set(members.flatMap((m) => (m.checks || []).map((c) => c.id)))];
+  const worstOf = (id) => {
+    let worst = null;
+    for (const m of members) {
+      const c = (m.checks || []).find((x) => x.id === id);
+      if (c && (!worst || SEV_RANK[c.severity] > SEV_RANK[worst])) worst = c.severity;
+    }
+    return worst;
+  };
+  checkIds.sort((a, b) =>
+    (SEV_RANK[worstOf(b)] || 0) - (SEV_RANK[worstOf(a)] || 0) || a.localeCompare(b));
   const hm = document.getElementById("heatmap");
+  let findingsTotal = members.reduce((n, m) => n + m.total_findings, 0);
   if (!members.length || !checkIds.length) {
-    hm.innerHTML = '<div class="rail-empty">No findings anywhere — the matrix is clear.</div>';
+    hm.innerHTML =
+      '<div class="rail-empty">✓ No findings anywhere — every check is clear across the fleet.</div>';
   } else {
-    const rowsHtml = members.map((m) => {
-      const byId = Object.fromEntries((m.checks || []).map((c) => [c.id, c]));
-      const cells = checkIds.map((id) => {
-        const c = byId[id];
-        const sev = c ? c.severity : null;
-        const title = id + " — " + (c ? c.count + " finding(s), worst " + sev : "clear");
-        return '<span class="hm-cell' + (sev ? " sev-" + esc(sev) : "") + '" title="' + esc(title) + '"></span>';
+    hm.style.setProperty("--mcols", members.length);
+    const header = '<div class="mx-row"><span></span>' + members.map((m) =>
+      '<span class="mx-member">' +
+      '<span class="avatar sm" style="background:' + avatarColor(m.member) + '">' +
+      esc(initials(m.member)) + "</span>" +
+      '<span class="mx-name" title="' + esc(m.member) + '">' + esc(m.member) + "</span></span>"
+    ).join("") + "</div>";
+    const rowsHtml = checkIds.map((id) => {
+      const worst = worstOf(id);
+      const cells = members.map((m) => {
+        const c = (m.checks || []).find((x) => x.id === id);
+        const title = esc(m.member) + " · " + esc(id) + " — " +
+          (c ? c.count + " finding(s), worst " + c.severity : "clear");
+        return '<span class="mx-cell' + (c ? " sev-" + esc(c.severity) : "") +
+          '" title="' + title + '">' + (c ? c.count : "·") + "</span>";
       }).join("");
-      return '<div class="hm-row"><span class="hm-name" title="' + esc(m.member) + '">' + esc(m.member) + "</span>" + cells + "</div>";
+      return '<div class="mx-row"><span class="mx-label">' +
+        '<span class="mx-worst' + (worst ? " sev-" + esc(worst) : "") + '">' +
+        (worst ? esc(worst) : "CLEAR") + "</span>" +
+        '<span class="mono" title="' + esc(id) + '">' + esc(id) + "</span></span>" +
+        cells + "</div>";
     }).join("");
-    const axis = '<div class="hm-x">' + checkIds.map((id) =>
-      "<span title=\"" + esc(id) + "\">" + esc(id.replace(/-/g, "·").slice(0, 18)) + "</span>").join("") + "</div>";
-    hm.innerHTML = rowsHtml + axis;
+    hm.innerHTML = header + rowsHtml;
   }
 
-  // Suppressions rail
+  // Needs attention (overview): every member that is not cleanly passing
+  const attn = members.filter((m) => memberState(m).label !== "PASS").map((m) => {
+    const st = memberState(m);
+    const reason = !m.signature_valid
+      ? "report failed signature verification — treat as untrusted"
+      : m.stale
+        ? "report is stale — last submit " + m.age_hours + "h ago"
+        : m.critical + " critical · " + m.high + " high blocking finding(s)";
+    return '<div class="event ' + (st.cls === "stale" ? "warn" : "alarm") + '">' +
+      '<span class="bar"></span><div><div class="t">' + esc(m.member) +
+      ' <span class="hs mono">' + esc(m.hostname) + '</span></div>' +
+      '<div class="d">' + esc(reason) + "</div></div>" +
+      '<span class="when"><span class="pill ' + st.cls + '">' + st.icon + " " + st.label +
+      "</span></span></div>";
+  });
+  document.getElementById("attn-list").innerHTML = attn.length
+    ? attn.join("")
+    : '<div class="rail-empty">✓ Everyone is green — nothing needs attention.</div>';
+
+  // Suppressions view
   const supp = [];
   for (const m of members) {
     for (const s of m.suppressions || []) {
@@ -589,10 +669,10 @@ function render() {
         '<div class="event' + (s.expiring_soon ? " warn" : "") + '"><span class="bar"></span><div>' +
         '<div class="t mono">' + esc(s.check_id) + "</div>" +
         '<div class="d">' + esc(s.m) + " — " + esc(s.reason) + "</div></div>" +
-        '<span class="when">' + s.days_left + "d left</span></div>").join("")
+        '<span class="when">' + s.days_left + "d left · expires " + esc(s.expires) + "</span></div>").join("")
     : '<div class="rail-empty">No active suppressions. Clean policy.</div>';
 
-  // Activity rail
+  // Activity view
   const acts = [];
   for (const m of members) {
     const st = memberState(m);
@@ -603,11 +683,47 @@ function render() {
     if (st.label === "PASS" && !(m.new_check_ids || []).length) acts.push({ cls: "ok", t: "Passing", d: m.member + " — clear to sign" });
   }
   document.getElementById("act-list").innerHTML = acts.length
-    ? acts.slice(0, 12).map((a) =>
+    ? acts.slice(0, 30).map((a) =>
         '<div class="event ' + a.cls + '"><span class="bar"></span><div>' +
         '<div class="t">' + esc(a.t) + '</div><div class="d">' + esc(a.d) + "</div></div></div>").join("")
     : '<div class="rail-empty">No activity yet.</div>';
+
+  // Sidebar badge counts
+  const setNum = (id, n) => { document.getElementById(id).textContent = n ? String(n) : ""; };
+  setNum("nav-members", members.length);
+  setNum("nav-findings", findingsTotal);
+  setNum("nav-supp", supp.length);
+  setNum("nav-act", acts.length);
 }
+
+// ---------- Tabs ----------
+const VIEWS = {
+  overview: ["Fleet overview", "Machine posture across the signing team"],
+  members: ["Members", "Every machine's latest signed report"],
+  findings: ["Findings matrix", "Worst severity per check, across members"],
+  suppressions: ["Suppressions", "Accepted risks and when they expire"],
+  activity: ["Activity", "What changed since each member's previous submit"],
+};
+function showView(name) {
+  if (!VIEWS[name]) name = "overview";
+  document.querySelectorAll(".nav button[data-view]").forEach((b) =>
+    b.classList.toggle("active", b.dataset.view === name));
+  document.querySelectorAll(".view[data-view]").forEach((v) => {
+    v.hidden = v.dataset.view !== name;
+  });
+  document.getElementById("view-title").textContent = VIEWS[name][0];
+  document.getElementById("view-sub").textContent = VIEWS[name][1];
+  try { localStorage.setItem("gard-view", name); } catch (e) {}
+  if (location.hash.slice(1) !== name) history.replaceState(null, "", "#" + name);
+}
+document.querySelectorAll(".nav button[data-view]").forEach((b) =>
+  b.addEventListener("click", () => showView(b.dataset.view)));
+window.addEventListener("hashchange", () => showView(location.hash.slice(1)));
+(function () {
+  let initial = location.hash.slice(1);
+  if (!initial) { try { initial = localStorage.getItem("gard-view") || ""; } catch (e) {} }
+  showView(initial || "overview");
+})();
 
 document.getElementById("themebtn").addEventListener("click", () => {
   const root = document.documentElement;
