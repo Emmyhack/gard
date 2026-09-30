@@ -1,27 +1,26 @@
-/// Core data types for Gard
-///
-/// Defines the structures for findings, reports, severity levels, and
-/// other fundamental types used throughout Gard.
+//! Core data types for Gard
+//!
+//! Defines the structures for findings, reports, severity levels, and
+//! other fundamental types used throughout Gard.
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
 /// Severity level for security findings
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum Severity {
-    #[serde(rename = "CRITICAL")]
-    Critical,
-    #[serde(rename = "HIGH")]
-    High,
-    #[serde(rename = "MEDIUM")]
-    Medium,
-    #[serde(rename = "LOW")]
-    Low,
+    // Declaration order defines derived Ord: Info < Low < ... < Critical
     #[serde(rename = "INFO")]
     Info,
+    #[serde(rename = "LOW")]
+    Low,
+    #[serde(rename = "MEDIUM")]
+    Medium,
+    #[serde(rename = "HIGH")]
+    High,
+    #[serde(rename = "CRITICAL")]
+    Critical,
 }
 
 impl fmt::Display for Severity {

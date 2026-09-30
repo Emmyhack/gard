@@ -313,6 +313,10 @@ Some checks are platform-specific:
 - Open port scanning: All platforms
 - Durable nonce verification: All platforms (requires RPC access)
 
+## Roadmap and Scaling Strategy
+
+See [docs/scaling.md](docs/scaling.md) for where Gard is headed: signed rulesets (v0.2), team fleet compliance (v0.3), and attestation-gated signing ceremonies (v0.4).
+
 ## Security Policy
 
 See [SECURITY.md](SECURITY.md) for responsible disclosure procedure.

@@ -1,21 +1,21 @@
-/// Check modules for Gard security checks
-///
-/// Each module implements the CheckModule trait and performs a specific
-/// security check on the local machine.
+//! Check modules for Gard security checks
+//!
+//! Each module implements the CheckModule trait and performs a specific
+//! security check on the local machine.
 
-pub mod registry;
-pub mod vscode_workspace;
-pub mod vscode_extension;
+pub mod browser_extensions;
 pub mod clipboard_monitor;
 pub mod env_variables;
-pub mod ssh_hygiene;
+pub mod hardware_wallet;
 pub mod open_ports;
+pub mod registry;
 pub mod software_wallets;
-pub mod unsigned_binaries;
 pub mod solana_config;
 pub mod solana_nonce;
-pub mod hardware_wallet;
-pub mod browser_extensions;
+pub mod ssh_hygiene;
+pub mod unsigned_binaries;
+pub mod vscode_extension;
+pub mod vscode_workspace;
 
 use crate::error::Result;
 use crate::types::{Finding, Platform, Severity};
@@ -48,6 +48,34 @@ pub trait CheckModule: Send + Sync {
     fn run(&self) -> Result<Vec<Finding>>;
 }
 
+static FINDING_COUNTER: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(1);
+
+/// Generate a unique finding identifier for this scan run
+pub fn next_finding_id() -> String {
+    let n = FINDING_COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+    format!("f_{:06}", n)
+}
+
+/// Build a Finding from a check module with the standard fields populated
+pub fn build_finding(
+    check: &dyn CheckModule,
+    description: String,
+    details: serde_json::Value,
+) -> Finding {
+    Finding {
+        id: next_finding_id(),
+        check_id: check.id().to_string(),
+        check_name: check.name().to_string(),
+        severity: check.severity(),
+        platform: crate::types::current_platform(),
+        description,
+        remediation: check.remediation().to_string(),
+        blocking: check.blocking_in_preflight(),
+        timestamp: chrono::Utc::now(),
+        details,
+    }
+}
+
 impl fmt::Debug for dyn CheckModule {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("CheckModule")
@@ -65,10 +93,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_check_trait_exists() {
-        // Verify that the CheckModule trait is properly defined
-        fn assert_check_module<T: CheckModule>(_: &T) {}
-        
-        // This is verified at compile time
+    fn test_finding_ids_are_unique() {
+        let a = next_finding_id();
+        let b = next_finding_id();
+        assert_ne!(a, b);
     }
 }

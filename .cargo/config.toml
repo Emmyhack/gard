@@ -1,7 +1,3 @@
-[build]
-# Use rustls instead of OpenSSL for TLS (avoid system dependency)
-rustflags = ["-C", "link-arg=-fuse-ld=lld"]
-
 # Deny list for known unsafe dependencies that should never be used in Gard
 # Commented dependencies are dangerous for OPSEC tooling
 # unsafe_crate = { version = "*", reason = "Explanation of why it's unsafe" }

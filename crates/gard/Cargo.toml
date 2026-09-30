@@ -43,9 +43,3 @@ zeroize = { version = "1.7", features = ["derive"] }
 # Testing utilities
 tempfile = "3.8"
 mockall = "0.12"
-
-[profile.release]
-opt-level = 3
-lto = true
-codegen-units = 1
-strip = true
