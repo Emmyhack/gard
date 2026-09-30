@@ -1,6 +1,6 @@
-/// CLI argument parsing and command dispatch
-///
-/// Handles all command-line argument parsing and routing to command handlers.
+//! CLI argument parsing and command dispatch
+//!
+//! Handles all command-line argument parsing and routing to command handlers.
 
 use clap::{Parser, Subcommand};
 
@@ -31,8 +31,8 @@ pub struct Cli {
     #[arg(global = true, short, long)]
     pub quiet: bool,
 
-    /// Increase verbosity (-v, -vv, -vvv)
-    #[arg(global = true, short, long, action = clap::ArgAction::Count)]
+    /// Increase log verbosity (-L, -LL, -LLL); subcommands have their own -v
+    #[arg(short = 'L', long = "log-verbose", action = clap::ArgAction::Count)]
     pub verbose: u8,
 }
 
@@ -92,7 +92,7 @@ pub struct PreflightCommand {
     pub confirm: bool,
 
     /// Override blocking findings with justification
-    #[arg(long)]
+    #[arg(long = "override", value_name = "REASON")]
     pub override_reason: Option<String>,
 
     /// Include detailed metadata
@@ -125,7 +125,11 @@ pub enum ConfigSubcommand {
     Set { key: String, value: String },
 
     /// Modify check enforcement status
-    Check { name: String, #[arg(long)] level: Option<String> },
+    Check {
+        name: String,
+        #[arg(long)]
+        level: Option<String>,
+    },
 
     /// Suppress a specific check
     Suppress {

@@ -1,8 +1,8 @@
-/// Error handling for Gard operations
-///
-/// All errors in Gard use a structured error type to provide context
-/// and actionable remediation information. No unwrap() calls in
-/// production code.
+//! Error handling for Gard operations
+//!
+//! All errors in Gard use a structured error type to provide context
+//! and actionable remediation information. No unwrap() calls in
+//! production code.
 
 use std::io;
 use thiserror::Error;
@@ -15,10 +15,7 @@ pub enum GardError {
     ConfigurationError { path: String, reason: String },
 
     #[error("Check execution failed for {check_name}: {reason}")]
-    CheckExecutionError {
-        check_name: String,
-        reason: String,
-    },
+    CheckExecutionError { check_name: String, reason: String },
 
     #[error("Permission denied: {resource}")]
     PermissionDenied { resource: String },
@@ -78,31 +75,23 @@ impl GardError {
         match self {
             GardError::ConfigurationError { .. } => {
                 "Check policy file syntax and schema, run 'gard config validate'"
-            }
+            },
             GardError::CheckExecutionError { .. } => {
                 "Check system permissions and try again, or run with --skip to skip this check"
-            }
+            },
             GardError::PermissionDenied { .. } => {
                 "Ensure sufficient permissions, may require sudo for some checks"
-            }
-            GardError::PlatformUnsupported { .. } => {
-                "This check is not available on your platform"
-            }
+            },
+            GardError::PlatformUnsupported { .. } => "This check is not available on your platform",
             GardError::NetworkError { .. } => {
                 "Check network connectivity, verify RPC endpoint is reachable"
-            }
-            GardError::SignatureVerificationFailed => {
-                "Report signature is invalid or corrupted"
-            }
-            GardError::InvalidReportFormat { .. } => {
-                "Report file format is corrupted or invalid"
-            }
+            },
+            GardError::SignatureVerificationFailed => "Report signature is invalid or corrupted",
+            GardError::InvalidReportFormat { .. } => "Report file format is corrupted or invalid",
             GardError::IoError { .. } => "Check file permissions and disk space",
             GardError::JsonError { .. } => "Report JSON format is invalid",
             GardError::TomlError { .. } => "Policy TOML format is invalid",
-            GardError::PolicyValidationError { .. } => {
-                "Policy file contains validation errors"
-            }
+            GardError::PolicyValidationError { .. } => "Policy file contains validation errors",
             GardError::Internal { .. } => "Gard encountered an internal error",
         }
     }

@@ -1,10 +1,6 @@
 # Gard Clippy Configuration
 # Security-focused linting for OPSEC tooling
 
-# Deny all clippy warnings by default (enforced in CI)
-# This is appropriate for security-sensitive code
-warn-import-cycles = true
-
 # Cognitive complexity threshold - keep functions simple and auditable
 too-many-arguments-threshold = 5
 type-complexity-threshold = 250
@@ -23,9 +19,6 @@ allow-unwrap-in-tests = true
 
 # Enforcement of absolute paths for macros to avoid namespace confusion
 absolute-paths-max-segments = 2
-
-# Restrict match-like-matches patterns in security-sensitive code
-match-boolean-expr = false
 
 # Restrict very large constants
 too-many-lines-threshold = 200

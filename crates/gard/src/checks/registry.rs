@@ -1,6 +1,6 @@
-/// Check module registry
-///
-/// Manages registration and execution of all security checks.
+//! Check module registry
+//!
+//! Manages registration and execution of all security checks.
 
 use super::CheckModule;
 use crate::error::Result;
@@ -16,13 +16,23 @@ pub struct CheckRegistry {
 impl CheckRegistry {
     /// Create a new check registry with all built-in checks
     pub fn new() -> Self {
-        let registry = CheckRegistry {
+        let mut registry = CheckRegistry {
             checks: HashMap::new(),
         };
 
-        // Register all checks here
-        // These will be populated as checks are implemented
-        
+        registry.register(Arc::new(super::vscode_workspace::VscodeWorkspaceCheck));
+        registry.register(Arc::new(super::vscode_extension::VscodeExtensionCheck));
+        registry.register(Arc::new(super::clipboard_monitor::ClipboardMonitorCheck));
+        registry.register(Arc::new(super::env_variables::EnvVariablesCheck));
+        registry.register(Arc::new(super::ssh_hygiene::SshHygieneCheck));
+        registry.register(Arc::new(super::open_ports::OpenPortsCheck));
+        registry.register(Arc::new(super::software_wallets::SoftwareWalletsCheck));
+        registry.register(Arc::new(super::unsigned_binaries::UnsignedBinariesCheck));
+        registry.register(Arc::new(super::solana_config::SolanaConfigCheck));
+        registry.register(Arc::new(super::solana_nonce::SolanaNonceCheck));
+        registry.register(Arc::new(super::hardware_wallet::HardwareWalletCheck));
+        registry.register(Arc::new(super::browser_extensions::BrowserExtensionsCheck));
+
         registry
     }
 
@@ -59,7 +69,7 @@ impl CheckRegistry {
                 Ok(findings) => all_findings.extend(findings),
                 Err(e) => {
                     tracing::warn!(check_id = check.id(), error = ?e, "Check failed");
-                }
+                },
             }
         }
 
@@ -79,7 +89,7 @@ impl CheckRegistry {
                     Ok(findings) => all_findings.extend(findings),
                     Err(e) => {
                         tracing::warn!(check_id = check.id(), error = ?e, "Check failed");
-                    }
+                    },
                 }
             }
         }
@@ -100,8 +110,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_registry_creation() {
+    fn test_registry_registers_all_checks() {
         let registry = CheckRegistry::new();
-        assert!(registry.all().is_empty() || !registry.all().is_empty()); // Always true
+        assert_eq!(registry.all().len(), 12);
+        assert!(registry.get("env-key-leakage").is_some());
+        assert!(registry.get("vscode-workspace-trust").is_some());
+        assert!(registry.get("solana-durable-nonce-verify").is_some());
     }
 }

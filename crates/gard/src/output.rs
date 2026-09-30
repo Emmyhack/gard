@@ -1,7 +1,7 @@
-/// Output formatting for Gard reports and findings
-///
-/// Provides human-readable and machine-readable output formats
-/// for scan results and preflight checks.
+//! Output formatting for Gard reports and findings
+//!
+//! Provides human-readable and machine-readable output formats
+//! for scan results and preflight checks.
 
 use crate::types::{Finding, Report, ReportSummary};
 use colored::Colorize;
@@ -17,6 +17,8 @@ pub enum OutputFormat {
 }
 
 impl OutputFormat {
+    // Fallible without an error type, so not the std FromStr trait
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
             "plaintext" | "text" => Some(OutputFormat::Plaintext),
@@ -51,7 +53,10 @@ pub fn format_findings_plaintext(findings: &[Finding], use_color: bool) -> Strin
         output.push_str(&format!("[{}] {}\n", severity_str, finding.check_name));
         output.push_str(&format!("Module: {}\n", finding.check_id));
         output.push_str(&format!("Platform: {}\n", finding.platform));
-        output.push_str(&format!("Blocking: {}\n\n", if finding.blocking { "Yes" } else { "No" }));
+        output.push_str(&format!(
+            "Blocking: {}\n\n",
+            if finding.blocking { "Yes" } else { "No" }
+        ));
 
         output.push_str("Description:\n");
         for line in finding.description.lines() {
@@ -103,10 +108,7 @@ pub fn format_summary_plaintext(summary: &ReportSummary, use_color: bool) -> Str
             ));
         }
         if summary.low > 0 {
-            output.push_str(&format!(
-                "  {}\n",
-                format!("LOW: {}", summary.low).cyan()
-            ));
+            output.push_str(&format!("  {}\n", format!("LOW: {}", summary.low).cyan()));
         }
     } else {
         if summary.critical > 0 {
@@ -175,23 +177,42 @@ pub fn format_report_markdown(report: &Report) -> String {
         report.metadata.timestamp.format("%Y-%m-%d %H:%M:%S UTC")
     ));
     output.push_str(&format!("Hostname: {}\n", report.metadata.hostname));
-    output.push_str(&format!("Platform: {} {}\n\n", report.metadata.platform, report.metadata.platform_version));
+    output.push_str(&format!(
+        "Platform: {} {}\n\n",
+        report.metadata.platform, report.metadata.platform_version
+    ));
 
     output.push_str("## Summary\n\n");
-    output.push_str(&format!("- Total Findings: {}\n", report.summary.total_findings));
+    output.push_str(&format!(
+        "- Total Findings: {}\n",
+        report.summary.total_findings
+    ));
     output.push_str(&format!("  - CRITICAL: {}\n", report.summary.critical));
     output.push_str(&format!("  - HIGH: {}\n", report.summary.high));
     output.push_str(&format!("  - MEDIUM: {}\n", report.summary.medium));
     output.push_str(&format!("  - LOW: {}\n", report.summary.low));
-    output.push_str(&format!("\nPreflight Status: {}\n\n", if report.summary.preflight_passing { "PASSED" } else { "FAILED" }));
+    output.push_str(&format!(
+        "\nPreflight Status: {}\n\n",
+        if report.summary.preflight_passing {
+            "PASSED"
+        } else {
+            "FAILED"
+        }
+    ));
 
     output.push_str("## Findings\n\n");
 
     for finding in &report.findings {
-        output.push_str(&format!("### [{}] {}\n\n", finding.severity, finding.check_name));
+        output.push_str(&format!(
+            "### [{}] {}\n\n",
+            finding.severity, finding.check_name
+        ));
         output.push_str(&format!("**Module:** {}\n\n", finding.check_id));
         output.push_str(&format!("**Severity:** {}\n\n", finding.severity));
-        output.push_str(&format!("**Blocking:** {}\n\n", if finding.blocking { "Yes" } else { "No" }));
+        output.push_str(&format!(
+            "**Blocking:** {}\n\n",
+            if finding.blocking { "Yes" } else { "No" }
+        ));
 
         output.push_str("**Description:**\n\n");
         output.push_str(&format!("{}\n\n", finding.description));
@@ -201,7 +222,10 @@ pub fn format_report_markdown(report: &Report) -> String {
 
         if !finding.details.is_null() {
             output.push_str("**Details:**\n\n");
-            output.push_str(&format!("```json\n{}\n```\n\n", serde_json::to_string_pretty(&finding.details).unwrap_or_default()));
+            output.push_str(&format!(
+                "```json\n{}\n```\n\n",
+                serde_json::to_string_pretty(&finding.details).unwrap_or_default()
+            ));
         }
     }
 
@@ -215,10 +239,19 @@ mod tests {
 
     #[test]
     fn test_output_format_from_str() {
-        assert_eq!(OutputFormat::from_str("plaintext"), Some(OutputFormat::Plaintext));
+        assert_eq!(
+            OutputFormat::from_str("plaintext"),
+            Some(OutputFormat::Plaintext)
+        );
         assert_eq!(OutputFormat::from_str("json"), Some(OutputFormat::Json));
-        assert_eq!(OutputFormat::from_str("json-pretty"), Some(OutputFormat::JsonPretty));
-        assert_eq!(OutputFormat::from_str("markdown"), Some(OutputFormat::Markdown));
+        assert_eq!(
+            OutputFormat::from_str("json-pretty"),
+            Some(OutputFormat::JsonPretty)
+        );
+        assert_eq!(
+            OutputFormat::from_str("markdown"),
+            Some(OutputFormat::Markdown)
+        );
         assert_eq!(OutputFormat::from_str("invalid"), None);
     }
 }

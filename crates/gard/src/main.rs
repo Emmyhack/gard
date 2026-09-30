@@ -2,7 +2,6 @@ use clap::Parser;
 use gard::cli::Cli;
 use gard::commands;
 use std::process;
-use tracing_subscriber;
 
 #[tokio::main]
 async fn main() {
@@ -32,7 +31,7 @@ async fn main() {
                 eprintln!("Remediation: {}", e.remediation());
             }
             e.exit_code()
-        }
+        },
     };
 
     process::exit(result);

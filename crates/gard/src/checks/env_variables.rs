@@ -1,7 +1,7 @@
-/// Environment variable audit for leaked key material
-///
-/// Detects keypair paths and secret environment variables in shell
-/// profiles, process environment, and CI configuration files.
+//! Environment variable audit for leaked key material
+//!
+//! Detects keypair paths and secret environment variables in shell
+//! profiles, process environment, and CI configuration files.
 
 use crate::checks::CheckModule;
 use crate::error::Result;
@@ -9,7 +9,7 @@ use crate::types::{Finding, Platform, Severity};
 use regex::Regex;
 use serde_json::json;
 use std::fs;
-use std::path::PathBuf;
+use std::path::Path;
 
 pub struct EnvVariablesCheck;
 
@@ -78,12 +78,11 @@ impl CheckModule for EnvVariablesCheck {
 impl EnvVariablesCheck {
     fn scan_shell_profiles(&self) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
-        let home = dirs::home_dir().ok_or_else(|| {
-            crate::error::GardError::CheckExecutionError {
+        let home =
+            dirs::home_dir().ok_or_else(|| crate::error::GardError::CheckExecutionError {
                 check_name: "env-key-leakage".to_string(),
                 reason: "Could not determine home directory".to_string(),
-            }
-        })?;
+            })?;
 
         let profiles = vec![
             home.join(".bashrc"),
@@ -132,12 +131,11 @@ impl EnvVariablesCheck {
 
     fn scan_ci_configuration(&self) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
-        let home = dirs::home_dir().ok_or_else(|| {
-            crate::error::GardError::CheckExecutionError {
+        let home =
+            dirs::home_dir().ok_or_else(|| crate::error::GardError::CheckExecutionError {
                 check_name: "env-key-leakage".to_string(),
                 reason: "Could not determine home directory".to_string(),
-            }
-        })?;
+            })?;
 
         let ci_paths = vec![
             home.join(".github/workflows"),
@@ -153,12 +151,15 @@ impl EnvVariablesCheck {
             } else if path.exists() && path.is_dir() {
                 // Scan workflow files
                 if let Ok(entries) = fs::read_dir(&path) {
-                    for entry in entries {
-                        if let Ok(entry) = entry {
-                            if entry.path().extension().map(|e| e == "yml" || e == "yaml").unwrap_or(false) {
-                                if let Ok(content) = fs::read_to_string(entry.path()) {
-                                    findings.extend(self.scan_file_content(&content, &entry.path())?);
-                                }
+                    for entry in entries.flatten() {
+                        if entry
+                            .path()
+                            .extension()
+                            .map(|e| e == "yml" || e == "yaml")
+                            .unwrap_or(false)
+                        {
+                            if let Ok(content) = fs::read_to_string(entry.path()) {
+                                findings.extend(self.scan_file_content(&content, &entry.path())?);
                             }
                         }
                     }
@@ -169,9 +170,10 @@ impl EnvVariablesCheck {
         Ok(findings)
     }
 
-    fn scan_file_content(&self, content: &str, source_path: &PathBuf) -> Result<Vec<Finding>> {
+    fn scan_file_content(&self, content: &str, source_path: &Path) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
-        let keypair_pattern = Regex::new(r"(?i)(SOLANA_KEYPAIR|KEYPAIR_PATH|SECRET_KEY|PRIVATE_KEY)").ok();
+        let keypair_pattern =
+            Regex::new(r"(?i)(SOLANA_KEYPAIR|KEYPAIR_PATH|SECRET_KEY|PRIVATE_KEY)").ok();
         let base58_pattern = Regex::new(r"[1-9A-HJ-NP-Z]{88}").ok();
 
         for (line_num, line) in content.lines().enumerate() {
@@ -183,7 +185,10 @@ impl EnvVariablesCheck {
                         check_name: self.name().to_string(),
                         severity: self.severity(),
                         platform: crate::types::current_platform(),
-                        description: format!("Keypair path pattern found in {}", source_path.display()),
+                        description: format!(
+                            "Keypair path pattern found in {}",
+                            source_path.display()
+                        ),
                         remediation: self.remediation().to_string(),
                         blocking: self.blocking_in_preflight(),
                         timestamp: chrono::Utc::now(),
@@ -205,7 +210,10 @@ impl EnvVariablesCheck {
                         check_name: self.name().to_string(),
                         severity: self.severity(),
                         platform: crate::types::current_platform(),
-                        description: format!("Potential Base58-encoded keypair found in {}", source_path.display()),
+                        description: format!(
+                            "Potential Base58-encoded keypair found in {}",
+                            source_path.display()
+                        ),
                         remediation: self.remediation().to_string(),
                         blocking: self.blocking_in_preflight(),
                         timestamp: chrono::Utc::now(),
@@ -224,9 +232,15 @@ impl EnvVariablesCheck {
 
     fn is_sensitive_variable(&self, key: &str) -> bool {
         let patterns = vec![
-            "KEYPAIR", "KEY_PATH", "SECRET", "PRIVATE_KEY", 
-            "SOLANA_KEYPAIR", "AWS_SECRET", "DATABASE_PASSWORD",
-            "API_KEY", "TOKEN"
+            "KEYPAIR",
+            "KEY_PATH",
+            "SECRET",
+            "PRIVATE_KEY",
+            "SOLANA_KEYPAIR",
+            "AWS_SECRET",
+            "DATABASE_PASSWORD",
+            "API_KEY",
+            "TOKEN",
         ];
 
         patterns.iter().any(|p| key.to_uppercase().contains(p))
