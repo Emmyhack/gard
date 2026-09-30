@@ -2,6 +2,7 @@
 //!
 //! This crate implements machine-level security checks and pre-flight
 //! validation for cryptocurrency signing operations on developer machines.
+pub mod attestation;
 pub mod checks;
 pub mod cli;
 pub mod commands;

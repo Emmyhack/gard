@@ -98,6 +98,42 @@ gard report --format json
 gard report --format markdown -o report.md
 ```
 
+### Attest a Signing Ceremony
+
+Before countersigning a multisig proposal, each signer produces a signed
+machine-posture attestation bound to the ceremony:
+
+```bash
+gard attest --ceremony prop-42 --signer alice
+```
+
+Attestation is refused while blocking findings exist — there is no override.
+Co-signers verify each other's attestations before countersigning:
+
+```bash
+gard verify gard-attestation-prop-42.json --ceremony prop-42
+```
+
+Register teammates' keys so verification also proves who signed:
+
+```bash
+gard report --export-key            # each member shares this output
+gard team add alice --key <hex>     # everyone registers everyone
+```
+
+### Track Fleet Compliance
+
+Point the team at a shared directory (a synced folder or git repository):
+
+```bash
+gard fleet submit --dir ~/team/gard-fleet     # each member, e.g. daily
+gard fleet status --dir ~/team/gard-fleet     # anyone
+```
+
+`fleet status` verifies every report's signature, flags stale or failing
+members, and exits non-zero unless the whole fleet is green. Set `[fleet]
+dir` in policy to drop the `--dir` flag.
+
 ### Initialize Policy
 
 Create local policy file at `~/.gard/policy.toml`:
@@ -213,6 +249,52 @@ Exit codes:
 - `1`: Update failed
 - `2`: Already latest version
 
+### gard attest
+
+Produce a signed machine-posture attestation bound to a ceremony. Refused
+while blocking findings exist.
+
+```bash
+gard attest --ceremony <ID> [--signer <NAME>] [--valid-for <MINUTES>] [-o <PATH>] [--json]
+```
+
+Exit codes: `0` attestation written, `1` blocking findings present.
+
+### gard verify
+
+Verify a co-signer's attestation: signature, freshness, ceremony binding,
+posture, and (when a team roster exists) that the key belongs to a
+registered signer.
+
+```bash
+gard verify <FILE> [--ceremony <ID>] [--require-trusted] [--json]
+```
+
+Exit codes: `0` acceptable, `1` rejected.
+
+### gard fleet
+
+File-based team compliance over a shared directory.
+
+```bash
+gard fleet submit [--dir <PATH>]
+gard fleet status [--dir <PATH>] [--max-age-hours <N>] [--json]
+```
+
+`submit` runs a fresh scan and writes the signed report as
+`<user>@<host>.json`. `status` verifies signatures, flags stale (default
+24h) and failing members, and exits `0` only when the fleet is green.
+
+### gard team
+
+Manage the trusted signer roster stored in `policy.toml` under `[team]`.
+
+```bash
+gard team add <NAME> --key <HEX>
+gard team list
+gard team remove <NAME>
+```
+
 ## Configuration Reference
 
 ### Policy File Format
@@ -252,6 +334,14 @@ trusted_rpc_endpoints = [
 
 [nonce]
 expected_authority = "MultisigAddress..."
+
+[[team.signers]]
+name = "alice"
+public_key = "<64-hex-chars-from-gard-report---export-key>"
+
+[fleet]
+dir = "/Users/alice/team/gard-fleet"
+max_age_hours = 24
 ```
 
 ### Check Enforcement Levels

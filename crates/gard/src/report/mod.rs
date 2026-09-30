@@ -22,6 +22,20 @@ impl ReportSigner {
         Ok(ReportSigner { signing_key })
     }
 
+    /// Build a signer from an explicit key (used by tests and tooling)
+    pub fn from_signing_key(signing_key: SigningKey) -> Self {
+        ReportSigner { signing_key }
+    }
+
+    /// Sign arbitrary bytes; returns (signature_hex, public_key_hex)
+    pub fn sign_bytes(&self, data: &[u8]) -> (String, String) {
+        let signature = self.signing_key.sign(data);
+        (
+            hex::encode(signature.to_bytes()),
+            hex::encode(self.signing_key.verifying_key().as_bytes()),
+        )
+    }
+
     /// Load existing keypair or create new one
     fn load_or_create_signing_key() -> Result<SigningKey> {
         let key_path = Self::private_key_path()?;

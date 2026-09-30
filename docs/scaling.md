@@ -1,6 +1,7 @@
 # Gard Scaling Strategy
 
-**Status:** Direction agreed, v0.1.0 shipped as the foundation
+**Status:** Layers 1 and 2 shipped as file-based CLI features (`attest`,
+`verify`, `team`, `fleet`); layer 3 (signed rulesets) is next
 **Last updated:** 2026-09-30
 
 ## The one-line thesis
@@ -57,11 +58,12 @@ Only 2 of the 12 checks are Solana-specific. SSH hygiene, VSCode workspace trust
 
 ## Sequencing
 
-| Version | Deliverable | Builds on |
-|---------|-------------|-----------|
-| v0.2 | Rules-as-data: signed ruleset format + `--rules-only` update path | Existing update command and report-signing infra |
-| v0.3 | Report collection and team fleet view | v0.2 attestation reports as the data source |
-| v0.4 | Ceremony integration (Squads first): attested co-signing | v0.3 collection + existing preflight gate |
+| Version | Deliverable | Status |
+| ------- | ----------- | ------ |
+| v0.2 | Ceremony attestations: `gard attest` / `gard verify` with a `gard team` trust roster | **Shipped** — signed, time-boxed, ceremony-bound posture claims; attestation refused while blocking findings exist |
+| v0.2 | Fleet compliance: `gard fleet submit` / `gard fleet status` over a shared directory | **Shipped** — signature-verified, staleness-flagged; a synced folder or git repo is the transport, no server required |
+| v0.3 | Rules-as-data: signed ruleset format + `--rules-only` update path | Next |
+| v0.4 | Hosted fleet dashboard; native ceremony integration (Squads first) | Planned — builds on the shipped attestation format |
 
 Each step reuses the last, and the attestation format becomes the spec everything else hangs off. The format should be treated as a public, stable contract from v0.2 onward.
 
