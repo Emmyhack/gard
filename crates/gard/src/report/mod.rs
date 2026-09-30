@@ -216,6 +216,7 @@ mod tests {
                 platform: crate::types::current_platform(),
                 platform_version: "test".to_string(),
                 scan_duration_ms: 1,
+                active_suppressions: Vec::new(),
                 signed: false,
                 signature: None,
                 public_key: None,

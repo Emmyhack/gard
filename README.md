@@ -131,8 +131,10 @@ gard fleet status --dir ~/team/gard-fleet     # anyone
 ```
 
 `fleet status` verifies every report's signature, flags stale or failing
-members, and exits non-zero unless the whole fleet is green. Set `[fleet]
-dir` in policy to drop the `--dir` flag.
+members, warns on suppressions expiring within 7 days, shows findings that
+are new or resolved since each member's previous submission, and exits
+non-zero unless the whole fleet is green. Set `[fleet] dir` in policy to
+drop the `--dir` flag.
 
 ### Initialize Policy
 
@@ -279,11 +281,28 @@ File-based team compliance over a shared directory.
 ```bash
 gard fleet submit [--dir <PATH>]
 gard fleet status [--dir <PATH>] [--max-age-hours <N>] [--json]
+gard fleet dashboard [--dir <PATH>] [--max-age-hours <N>] [-o <PATH>]
+gard fleet serve [--dir <PATH>] [--port <PORT>] [--max-age-hours <N>]
 ```
 
 `submit` runs a fresh scan and writes the signed report as
 `<user>@<host>.json`. `status` verifies signatures, flags stale (default
 24h) and failing members, and exits `0` only when the fleet is green.
+
+`dashboard` renders the same view into a self-contained `index.html` in the
+fleet directory: summary tiles, per-member status, expiring suppressions,
+and new/resolved findings, in light and dark themes with no external
+dependencies. Once generated, every `fleet submit` refreshes it, and the
+page reloads itself every 5 minutes — so serving the fleet directory (for
+example with GitHub Pages on the shared repo) gives the team a URL to
+check daily without running any server.
+
+`serve` runs the same dashboard as a live web app at
+`http://127.0.0.1:8787/` (default port), backed by a JSON API at
+`/api/status` that recomputes fleet state from the directory on every
+request; the page polls it every 30 seconds. It binds to localhost only,
+by design — pair it with the shared fleet directory (synced folder or git
+repo) so each member's local dashboard shows the whole team live.
 
 ### gard team
 

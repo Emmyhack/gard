@@ -15,6 +15,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `gard fleet submit` / `gard fleet status`: file-based team compliance over
   a shared directory, with signature verification, staleness flagging, and
   tamper detection
+- Fleet change detection: each submission archives the previous report, and
+  `fleet status` shows findings new or resolved since a member's last submit
+- Suppression visibility: scan reports embed active suppressions, and
+  `fleet status` warns when one expires within 7 days
+- `gard fleet dashboard`: renders the fleet view into a self-contained,
+  theme-aware `index.html` (no server, no external dependencies) that
+  `fleet submit` keeps refreshed; serve the fleet directory (e.g. GitHub
+  Pages) to give the team a URL
+- `gard fleet serve`: live web dashboard on localhost with a JSON API
+  (`/api/status`) that recomputes fleet state per request; the page polls
+  every 30 seconds — no external web framework, built on the existing
+  tokio runtime
 - `gard team add/list/remove`: trusted signer roster stored in policy.toml,
   so distributing one policy file distributes the trust anchors
 - `[team]` and `[fleet]` policy sections

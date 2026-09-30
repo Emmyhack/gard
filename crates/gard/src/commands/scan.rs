@@ -95,7 +95,8 @@ pub fn run_scan(policy: &Policy, skip: &HashSet<String>, only: &HashSet<String>)
     });
 
     let summary = ReportSummary::from_findings(&findings);
-    let metadata = build_metadata(start.elapsed().as_millis() as u64);
+    let mut metadata = build_metadata(start.elapsed().as_millis() as u64);
+    metadata.active_suppressions = active_suppressions(policy);
 
     Ok(Report {
         metadata,
@@ -104,10 +105,10 @@ pub fn run_scan(policy: &Policy, skip: &HashSet<String>, only: &HashSet<String>)
     })
 }
 
-/// Apply enforcement levels and unexpired suppressions from policy
-fn apply_policy(findings: &mut Vec<Finding>, policy: &Policy) {
+/// Suppressions from policy that have not yet expired
+pub fn active_suppressions(policy: &Policy) -> Vec<crate::types::Suppression> {
     let today = chrono::Utc::now().date_naive();
-    let active_suppressions: HashSet<&str> = policy
+    policy
         .suppressions
         .iter()
         .filter(|s| {
@@ -115,10 +116,18 @@ fn apply_policy(findings: &mut Vec<Finding>, policy: &Policy) {
                 .map(|d| d >= today)
                 .unwrap_or(false)
         })
-        .map(|s| s.check_id.as_str())
+        .cloned()
+        .collect()
+}
+
+/// Apply enforcement levels and unexpired suppressions from policy
+fn apply_policy(findings: &mut Vec<Finding>, policy: &Policy) {
+    let suppressed: HashSet<String> = active_suppressions(policy)
+        .into_iter()
+        .map(|s| s.check_id)
         .collect();
 
-    findings.retain(|f| !active_suppressions.contains(f.check_id.as_str()));
+    findings.retain(|f| !suppressed.contains(f.check_id.as_str()));
 
     for finding in findings.iter_mut() {
         if policy.checks.get(&finding.check_id).map(String::as_str) == Some("warn") {
@@ -139,6 +148,7 @@ fn build_metadata(scan_duration_ms: u64) -> ReportMetadata {
         platform: current_platform(),
         platform_version: sysinfo::System::os_version().unwrap_or_else(|| "unknown".to_string()),
         scan_duration_ms,
+        active_suppressions: Vec::new(),
         signed: false,
         signature: None,
         public_key: None,

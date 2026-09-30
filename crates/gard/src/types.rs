@@ -146,6 +146,10 @@ pub struct ReportMetadata {
     /// Scan duration in milliseconds
     pub scan_duration_ms: u64,
 
+    /// Suppressions that were active (unexpired) at scan time
+    #[serde(default)]
+    pub active_suppressions: Vec<Suppression>,
+
     /// Whether report was signed
     pub signed: bool,
 
