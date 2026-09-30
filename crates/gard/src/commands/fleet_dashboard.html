@@ -21,10 +21,10 @@
   --muted: #676577;
   --line: rgba(255, 255, 255, 0.07);
   --line-2: rgba(255, 255, 255, 0.12);
-  --accent: #8b7cf7;
-  --accent-2: #b39df5;
-  --accent-ink: #cfc5ff;
-  --accent-wash: rgba(139, 124, 247, 0.14);
+  --accent: #b105e1;
+  --accent-2: #d24df5;
+  --accent-ink: #e492fa;
+  --accent-wash: rgba(177, 5, 225, 0.16);
   --good: #31c46b;
   --warning: #fab219;
   --serious: #ec835a;
@@ -34,9 +34,9 @@
   --serious-wash: rgba(236, 131, 90, 0.14);
   --critical-wash: rgba(224, 82, 82, 0.13);
   --cell-0: rgba(255, 255, 255, 0.04);
-  --hero-a: #6d5df0;
-  --hero-b: #b558d6;
-  --hero-c: #e8944a;
+  --hero-a: #6d21d6;
+  --hero-b: #b105e1;
+  --hero-c: #ff7e5f;
   color-scheme: dark;
 }
 @media (prefers-color-scheme: light) {
@@ -50,10 +50,10 @@
     --muted: #8b889c;
     --line: rgba(23, 21, 31, 0.08);
     --line-2: rgba(23, 21, 31, 0.16);
-    --accent: #6a58e8;
-    --accent-2: #8b7cf7;
-    --accent-ink: #4d3dc9;
-    --accent-wash: rgba(106, 88, 232, 0.10);
+    --accent: #b105e1;
+    --accent-2: #9404bc;
+    --accent-ink: #8a04ad;
+    --accent-wash: rgba(177, 5, 225, 0.09);
     --good: #118a41;
     --warning: #9a6c00;
     --serious: #b85426;
@@ -76,10 +76,10 @@
   --muted: #8b889c;
   --line: rgba(23, 21, 31, 0.08);
   --line-2: rgba(23, 21, 31, 0.16);
-  --accent: #6a58e8;
-  --accent-2: #8b7cf7;
-  --accent-ink: #4d3dc9;
-  --accent-wash: rgba(106, 88, 232, 0.10);
+  --accent: #b105e1;
+  --accent-2: #9404bc;
+  --accent-ink: #8a04ad;
+  --accent-wash: rgba(177, 5, 225, 0.09);
   --good: #118a41;
   --warning: #9a6c00;
   --serious: #b85426;
@@ -436,7 +436,7 @@ let DATA = __GARD_DATA__;
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) =>
   ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-const AVATARS = ["#8b7cf7", "#d55181", "#199e70", "#c98500", "#3987e5", "#e66767"];
+const AVATARS = ["#b105e1", "#3987e5", "#199e70", "#c98500", "#d55181", "#6d21d6"];
 const avatarColor = (name) => {
   let h = 0;
   for (const ch of String(name)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
