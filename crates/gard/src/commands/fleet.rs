@@ -28,7 +28,7 @@ const HISTORY_DIR: &str = "history";
 pub async fn execute(subcommand: FleetSubcommand) -> Result<i32> {
     let policy = config::load_policy(None)?;
     match subcommand {
-        FleetSubcommand::Submit { dir } => submit(&policy, dir).await,
+        FleetSubcommand::Submit { dir, url, token } => submit(&policy, dir, url, token).await,
         FleetSubcommand::Status {
             dir,
             max_age_hours,
@@ -42,35 +42,30 @@ pub async fn execute(subcommand: FleetSubcommand) -> Result<i32> {
         FleetSubcommand::Serve {
             dir,
             port,
+            bind,
+            token,
             max_age_hours,
-        } => serve(&policy, dir, port, max_age_hours).await,
+        } => serve(&policy, dir, port, &bind, token, max_age_hours).await,
     }
 }
 
-async fn submit(policy: &Policy, dir: Option<String>) -> Result<i32> {
-    let fleet_dir = resolve_fleet_dir(policy, dir)?;
-    fs::create_dir_all(&fleet_dir)?;
-
+async fn submit(
+    policy: &Policy,
+    dir: Option<String>,
+    url: Option<String>,
+    token: Option<String>,
+) -> Result<i32> {
     let mut report = super::scan::run_scan(policy, &HashSet::new(), &HashSet::new())?;
     let signer = ReportSigner::new()?;
     signer.sign_report(&mut report)?;
 
-    let file_name = format!(
-        "{}@{}.json",
-        sanitize(&report.metadata.username),
-        sanitize(&report.metadata.hostname)
-    );
-    let path = fleet_dir.join(&file_name);
-
-    // Keep the outgoing report as the member's previous submission so
-    // status can show what changed between scans
-    if path.exists() {
-        let history_dir = fleet_dir.join(HISTORY_DIR);
-        fs::create_dir_all(&history_dir)?;
-        fs::rename(&path, history_dir.join(&file_name))?;
+    if let Some(url) = url {
+        return submit_remote(&report, &url, token.as_deref()).await;
     }
 
-    fs::write(&path, serde_json::to_string_pretty(&report)?)?;
+    let fleet_dir = resolve_fleet_dir(policy, dir)?;
+    fs::create_dir_all(&fleet_dir)?;
+    let file_name = store_report(&fleet_dir, &report)?;
 
     // Keep a previously generated dashboard current with every submission
     let dashboard_path = fleet_dir.join("index.html");
@@ -102,6 +97,81 @@ async fn submit(policy: &Policy, dir: Option<String>) -> Result<i32> {
     } else {
         1
     })
+}
+
+/// Write a report into the fleet directory, rotating the member's
+/// previous submission into history/ so status can diff against it.
+/// Returns the stored file name.
+fn store_report(fleet_dir: &Path, report: &Report) -> Result<String> {
+    let file_name = format!(
+        "{}@{}.json",
+        sanitize(&report.metadata.username),
+        sanitize(&report.metadata.hostname)
+    );
+    let path = fleet_dir.join(&file_name);
+
+    if path.exists() {
+        let history_dir = fleet_dir.join(HISTORY_DIR);
+        fs::create_dir_all(&history_dir)?;
+        fs::rename(&path, history_dir.join(&file_name))?;
+    }
+
+    fs::write(&path, serde_json::to_string_pretty(report)?)?;
+    Ok(file_name)
+}
+
+/// POST the signed report to a fleet server
+async fn submit_remote(report: &Report, url: &str, token: Option<&str>) -> Result<i32> {
+    let endpoint = format!("{}/api/submit", url.trim_end_matches('/'));
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(15))
+        .build()
+        .map_err(|e| GardError::NetworkError {
+            endpoint: endpoint.clone(),
+            reason: e.to_string(),
+        })?;
+
+    let mut request = client.post(&endpoint).json(report);
+    if let Some(token) = token {
+        request = request.bearer_auth(token);
+    }
+
+    let response = request.send().await.map_err(|e| GardError::NetworkError {
+        endpoint: endpoint.clone(),
+        reason: e.to_string(),
+    })?;
+
+    let status_code = response.status();
+    let body: serde_json::Value = response.json().await.unwrap_or_default();
+
+    if status_code.is_success() {
+        println!(
+            "Submitted to {} ({} findings, preflight {})",
+            endpoint,
+            report.summary.total_findings,
+            if report.summary.preflight_passing {
+                "PASS".green().bold()
+            } else {
+                "FAIL".red().bold()
+            }
+        );
+        Ok(if report.summary.preflight_passing {
+            0
+        } else {
+            1
+        })
+    } else {
+        Err(GardError::NetworkError {
+            endpoint,
+            reason: format!(
+                "HTTP {}: {}",
+                status_code,
+                body.get("error")
+                    .and_then(|e| e.as_str())
+                    .unwrap_or("submission rejected")
+            ),
+        })
+    }
 }
 
 /// A suppression as shown in the fleet view
@@ -263,22 +333,33 @@ fn dashboard(
     Ok(0)
 }
 
-/// Serve the dashboard and a live status API on localhost. Fleet state
+/// Maximum accepted submission body (a signed report)
+const MAX_BODY_BYTES: usize = 4 * 1024 * 1024;
+
+/// Serve the dashboard, live status API, and submission API. Fleet state
 /// is recomputed from the directory on every API request, so the page
 /// stays current without regeneration.
 async fn serve(
     policy: &Policy,
     dir: Option<String>,
     port: u16,
+    bind: &str,
+    token: Option<String>,
     max_age_hours: Option<u64>,
 ) -> Result<i32> {
-    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::io::AsyncWriteExt;
 
     let fleet_dir = resolve_fleet_dir(policy, dir)?;
-    if !fleet_dir.exists() {
+    fs::create_dir_all(&fleet_dir)?;
+
+    let localhost = bind == "127.0.0.1" || bind == "localhost" || bind == "::1";
+    if !localhost && token.is_none() {
         return Err(GardError::ConfigurationError {
-            path: fleet_dir.to_string_lossy().to_string(),
-            reason: "Fleet directory does not exist".to_string(),
+            path: bind.to_string(),
+            reason: "Binding beyond localhost requires --token so the fleet is not \
+                     exposed unauthenticated. Put TLS in front (reverse proxy) for \
+                     anything reachable from the internet."
+                .to_string(),
         });
     }
 
@@ -286,18 +367,31 @@ async fn serve(
         .or(policy.fleet.max_age_hours)
         .unwrap_or(DEFAULT_MAX_AGE_HOURS) as i64;
 
-    // Localhost only, deliberately: a signing-team compliance view should
-    // never be exposed as a network service by default.
-    let listener = tokio::net::TcpListener::bind(("127.0.0.1", port))
+    let listener = tokio::net::TcpListener::bind((bind, port))
         .await
         .map_err(|e| GardError::NetworkError {
-            endpoint: format!("127.0.0.1:{}", port),
+            endpoint: format!("{}:{}", bind, port),
             reason: e.to_string(),
         })?;
 
-    println!("Fleet dashboard: http://127.0.0.1:{}/", port);
-    println!("Live status API: http://127.0.0.1:{}/api/status", port);
+    println!("Fleet dashboard: http://{}:{}/", bind, port);
+    println!("Live status API: http://{}:{}/api/status", bind, port);
+    println!(
+        "Submissions:     gard fleet submit --url http://{}:{}{}",
+        bind,
+        port,
+        if token.is_some() {
+            " --token <TOKEN>"
+        } else {
+            ""
+        }
+    );
+    if token.is_some() {
+        println!("API access requires the bearer token; the dashboard will prompt for it.");
+    }
     println!("Watching {} — Ctrl-C to stop.", fleet_dir.display());
+
+    let token = std::sync::Arc::new(token);
 
     loop {
         let (mut stream, _) = match listener.accept().await {
@@ -305,20 +399,12 @@ async fn serve(
             Err(_) => continue,
         };
         let fleet_dir = fleet_dir.clone();
+        let token = token.clone();
 
         tokio::spawn(async move {
-            let mut buf = [0u8; 4096];
-            let n = match stream.read(&mut buf).await {
-                Ok(n) if n > 0 => n,
-                _ => return,
+            let Some(request) = read_request(&mut stream).await else {
+                return;
             };
-            let request = String::from_utf8_lossy(&buf[..n]);
-            let path = request
-                .lines()
-                .next()
-                .and_then(|line| line.split_whitespace().nth(1))
-                .unwrap_or("/")
-                .to_string();
 
             // Policy reloaded per request so roster/config edits apply live
             let policy = config::load_policy(None).unwrap_or_default();
@@ -327,48 +413,217 @@ async fn serve(
                 .max_age_hours
                 .map(|h| h as i64)
                 .unwrap_or(max_age);
-            let response = respond(&path, &policy, &fleet_dir, max_age);
+            let response = respond(&request, &policy, &fleet_dir, max_age, token.as_deref());
             let _ = stream.write_all(response.as_bytes()).await;
             let _ = stream.shutdown().await;
         });
     }
 }
 
-/// Route an HTTP request path to a full HTTP/1.1 response
-fn respond(path: &str, policy: &Policy, fleet_dir: &Path, max_age: i64) -> String {
-    match path {
-        "/" | "/index.html" => {
+/// A minimally parsed HTTP request
+struct HttpRequest {
+    method: String,
+    path: String,
+    bearer_token: Option<String>,
+    body: String,
+}
+
+/// Read and parse one HTTP request (headers plus Content-Length body)
+async fn read_request(stream: &mut tokio::net::TcpStream) -> Option<HttpRequest> {
+    use tokio::io::AsyncReadExt;
+
+    let mut data = Vec::new();
+    let mut buf = [0u8; 8192];
+
+    // Read until end of headers
+    let header_end = loop {
+        let n = stream.read(&mut buf).await.ok()?;
+        if n == 0 {
+            return None;
+        }
+        data.extend_from_slice(&buf[..n]);
+        if let Some(pos) = find_subslice(&data, b"\r\n\r\n") {
+            break pos + 4;
+        }
+        if data.len() > 64 * 1024 {
+            return None;
+        }
+    };
+
+    let headers = String::from_utf8_lossy(&data[..header_end]).to_string();
+    let mut lines = headers.lines();
+    let request_line = lines.next()?;
+    let mut parts = request_line.split_whitespace();
+    let method = parts.next()?.to_uppercase();
+    let path = parts.next()?.to_string();
+
+    let mut bearer_token = None;
+    let mut content_length = 0usize;
+    for line in lines {
+        let lower = line.to_lowercase();
+        if let Some(value) = lower.strip_prefix("authorization:") {
+            if let Some(tok) = value.trim().strip_prefix("bearer ") {
+                // Recover original-case token from the raw line
+                let raw = line[line.len() - tok.len()..].trim().to_string();
+                bearer_token = Some(raw);
+            }
+        } else if let Some(value) = lower.strip_prefix("content-length:") {
+            content_length = value.trim().parse().unwrap_or(0);
+        }
+    }
+
+    if content_length > MAX_BODY_BYTES {
+        return None;
+    }
+
+    // Read the remainder of the body
+    while data.len() < header_end + content_length {
+        let n = stream.read(&mut buf).await.ok()?;
+        if n == 0 {
+            break;
+        }
+        data.extend_from_slice(&buf[..n]);
+    }
+    let body = String::from_utf8_lossy(&data[header_end..]).to_string();
+
+    Some(HttpRequest {
+        method,
+        path,
+        bearer_token,
+        body,
+    })
+}
+
+fn find_subslice(haystack: &[u8], needle: &[u8]) -> Option<usize> {
+    haystack
+        .windows(needle.len())
+        .position(|window| window == needle)
+}
+
+/// Constant-time-ish token comparison to avoid trivially timeable equality
+fn token_matches(provided: Option<&str>, expected: &str) -> bool {
+    let Some(provided) = provided else {
+        return false;
+    };
+    provided.len() == expected.len()
+        && provided
+            .bytes()
+            .zip(expected.bytes())
+            .fold(0u8, |acc, (a, b)| acc | (a ^ b))
+            == 0
+}
+
+/// Route an HTTP request to a full HTTP/1.1 response
+fn respond(
+    request: &HttpRequest,
+    policy: &Policy,
+    fleet_dir: &Path,
+    max_age: i64,
+    token: Option<&str>,
+) -> String {
+    let authorized = match token {
+        Some(expected) => token_matches(request.bearer_token.as_deref(), expected),
+        None => true,
+    };
+    let unauthorized = || {
+        http_response(
+            "401 Unauthorized",
+            "application/json",
+            &serde_json::json!({ "error": "missing or invalid bearer token" }).to_string(),
+        )
+    };
+
+    match (request.method.as_str(), request.path.as_str()) {
+        // The page itself is a data-free shell; all data is behind the API
+        ("GET", "/") | ("GET", "/index.html") => {
             let html = include_str!("fleet_dashboard.html")
                 .replace("__GARD_DATA__", "null")
                 // Live mode polls the API; a full page reload is unnecessary
                 .replace("<meta http-equiv=\"refresh\" content=\"300\">\n", "");
             http_response("200 OK", "text/html; charset=utf-8", &html)
         },
-        "/api/status" => match collect_members(policy, fleet_dir, max_age) {
-            Ok(members) => {
-                let all_green = !members.is_empty()
-                    && members
-                        .iter()
-                        .all(|m| m.signature_valid && m.preflight_passing && !m.stale);
-                let payload = serde_json::json!({
-                    "generated_at": chrono::Utc::now(),
-                    "max_age_hours": max_age,
-                    "all_green": all_green,
-                    "members": members,
-                });
-                http_response(
-                    "200 OK",
+        ("GET", "/api/status") => {
+            if !authorized {
+                return unauthorized();
+            }
+            match collect_members(policy, fleet_dir, max_age) {
+                Ok(members) => {
+                    let all_green = !members.is_empty()
+                        && members
+                            .iter()
+                            .all(|m| m.signature_valid && m.preflight_passing && !m.stale);
+                    let payload = serde_json::json!({
+                        "generated_at": chrono::Utc::now(),
+                        "max_age_hours": max_age,
+                        "all_green": all_green,
+                        "members": members,
+                    });
+                    http_response(
+                        "200 OK",
+                        "application/json",
+                        &serde_json::to_string(&payload).unwrap_or_else(|_| "{}".to_string()),
+                    )
+                },
+                Err(e) => http_response(
+                    "500 Internal Server Error",
                     "application/json",
-                    &serde_json::to_string(&payload).unwrap_or_else(|_| "{}".to_string()),
-                )
-            },
-            Err(e) => http_response(
-                "500 Internal Server Error",
-                "application/json",
-                &serde_json::json!({ "error": e.to_string() }).to_string(),
-            ),
+                    &serde_json::json!({ "error": e.to_string() }).to_string(),
+                ),
+            }
+        },
+        ("POST", "/api/submit") => {
+            if !authorized {
+                return unauthorized();
+            }
+            handle_submission(&request.body, policy, fleet_dir)
         },
         _ => http_response("404 Not Found", "text/plain; charset=utf-8", "not found"),
+    }
+}
+
+/// Accept a submitted report: parse, verify its Ed25519 signature, and
+/// (when a team roster exists) require the signing key to be registered.
+fn handle_submission(body: &str, policy: &Policy, fleet_dir: &Path) -> String {
+    let reject = |status: &str, reason: &str| {
+        http_response(
+            status,
+            "application/json",
+            &serde_json::json!({ "error": reason }).to_string(),
+        )
+    };
+
+    let Ok(report) = serde_json::from_str::<Report>(body) else {
+        return reject("400 Bad Request", "body is not a valid gard report");
+    };
+
+    if !verify_report(&report).unwrap_or(false) {
+        return reject("403 Forbidden", "report signature is missing or invalid");
+    }
+
+    if !policy.team.signers.is_empty() {
+        let known = report.metadata.public_key.as_ref().is_some_and(|pk| {
+            let pk_hex = pk.strip_prefix("ed25519 ").unwrap_or(pk);
+            policy
+                .team
+                .signers
+                .iter()
+                .any(|s| s.public_key.eq_ignore_ascii_case(pk_hex))
+        });
+        if !known {
+            return reject(
+                "403 Forbidden",
+                "signing key is not on the team roster; register it with 'gard team add'",
+            );
+        }
+    }
+
+    match store_report(fleet_dir, &report) {
+        Ok(file_name) => http_response(
+            "200 OK",
+            "application/json",
+            &serde_json::json!({ "stored": file_name }).to_string(),
+        ),
+        Err(e) => reject("500 Internal Server Error", &e.to_string()),
     }
 }
 
@@ -661,23 +916,116 @@ mod tests {
         assert!(!html.contains("__GARD_DATA__"));
     }
 
+    fn get(path: &str, token: Option<&str>) -> HttpRequest {
+        HttpRequest {
+            method: "GET".to_string(),
+            path: path.to_string(),
+            bearer_token: token.map(String::from),
+            body: String::new(),
+        }
+    }
+
     #[test]
     fn test_respond_routes() {
         let policy = crate::types::Policy::default();
         let dir = std::env::temp_dir();
 
-        let page = respond("/", &policy, &dir, 24);
+        let page = respond(&get("/", None), &policy, &dir, 24, None);
         assert!(page.starts_with("HTTP/1.1 200 OK"));
         assert!(page.contains("Gard Fleet"));
         assert!(page.contains("let DATA = null;"));
         assert!(!page.contains("http-equiv=\"refresh\""));
 
-        let api = respond("/api/status", &policy, &dir, 24);
+        let api = respond(&get("/api/status", None), &policy, &dir, 24, None);
         assert!(api.starts_with("HTTP/1.1 200 OK"));
         assert!(api.contains("\"members\""));
 
-        let missing = respond("/nope", &policy, &dir, 24);
+        let missing = respond(&get("/nope", None), &policy, &dir, 24, None);
         assert!(missing.starts_with("HTTP/1.1 404"));
+    }
+
+    #[test]
+    fn test_api_requires_token_when_configured() {
+        let policy = crate::types::Policy::default();
+        let dir = std::env::temp_dir();
+
+        let denied = respond(&get("/api/status", None), &policy, &dir, 24, Some("s3cret"));
+        assert!(denied.starts_with("HTTP/1.1 401"));
+
+        let wrong = respond(
+            &get("/api/status", Some("nope")),
+            &policy,
+            &dir,
+            24,
+            Some("s3cret"),
+        );
+        assert!(wrong.starts_with("HTTP/1.1 401"));
+
+        let ok = respond(
+            &get("/api/status", Some("s3cret")),
+            &policy,
+            &dir,
+            24,
+            Some("s3cret"),
+        );
+        assert!(ok.starts_with("HTTP/1.1 200"));
+
+        // The dashboard shell itself stays reachable; it holds no data
+        let page = respond(&get("/", None), &policy, &dir, 24, Some("s3cret"));
+        assert!(page.starts_with("HTTP/1.1 200"));
+    }
+
+    #[test]
+    fn test_token_matches() {
+        assert!(token_matches(Some("abc"), "abc"));
+        assert!(!token_matches(Some("abd"), "abc"));
+        assert!(!token_matches(Some("ab"), "abc"));
+        assert!(!token_matches(None, "abc"));
+    }
+
+    #[test]
+    fn test_submission_rejects_unsigned_and_tampered() {
+        let policy = crate::types::Policy::default();
+        let dir = std::env::temp_dir();
+
+        let garbage = handle_submission("not json", &policy, &dir);
+        assert!(garbage.starts_with("HTTP/1.1 400"));
+
+        // Unsigned report is refused
+        let report = report_with_checks(&[]);
+        let body = serde_json::to_string(&report).unwrap();
+        let unsigned = handle_submission(&body, &policy, &dir);
+        assert!(unsigned.starts_with("HTTP/1.1 403"));
+    }
+
+    #[test]
+    fn test_submission_roster_enforcement() {
+        use ed25519_dalek::SigningKey;
+        let mut rng = rand::thread_rng();
+        let seed: [u8; 32] = rand::Rng::gen(&mut rng);
+        let signer = crate::report::ReportSigner::from_signing_key(SigningKey::from_bytes(&seed));
+
+        let mut report = report_with_checks(&[]);
+        signer.sign_report(&mut report).unwrap();
+        let body = serde_json::to_string(&report).unwrap();
+
+        let dir = std::env::temp_dir().join("gard-fleet-test");
+        std::fs::create_dir_all(&dir).unwrap();
+
+        // Roster configured, key not on it -> refused
+        let mut policy = crate::types::Policy::default();
+        policy.team.signers.push(crate::types::TeamSigner {
+            name: "someone-else".to_string(),
+            public_key: "ab".repeat(32),
+        });
+        let refused = handle_submission(&body, &policy, &dir);
+        assert!(refused.starts_with("HTTP/1.1 403"));
+
+        // Key registered -> accepted and stored
+        policy.team.signers[0].public_key = signer.public_key_hex();
+        let accepted = handle_submission(&body, &policy, &dir);
+        assert!(accepted.starts_with("HTTP/1.1 200"), "{}", accepted);
+        std::fs::remove_dir_all(&dir).ok();
     }
 
     #[test]

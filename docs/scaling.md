@@ -62,6 +62,7 @@ Only 2 of the 12 checks are Solana-specific. SSH hygiene, VSCode workspace trust
 | ------- | ----------- | ------ |
 | v0.2 | Ceremony attestations: `gard attest` / `gard verify` with a `gard team` trust roster | **Shipped** — signed, time-boxed, ceremony-bound posture claims; attestation refused while blocking findings exist |
 | v0.2 | Fleet compliance: `gard fleet submit` / `gard fleet status` over a shared directory | **Shipped** — signature-verified, staleness-flagged; a synced folder or git repo is the transport, no server required |
+| v0.2 | Self-hostable fleet server: `gard fleet serve` with token auth, a live web dashboard, and HTTP submissions verified against the roster | **Shipped** — deployable on a VPS today; the managed/hosted version of this is the commercial offering |
 | v0.3 | Rules-as-data: signed ruleset format + `--rules-only` update path | Next |
 | v0.4 | Hosted fleet dashboard; native ceremony integration (Squads first) | Planned — builds on the shipped attestation format |
 

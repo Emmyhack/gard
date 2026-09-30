@@ -23,10 +23,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   theme-aware `index.html` (no server, no external dependencies) that
   `fleet submit` keeps refreshed; serve the fleet directory (e.g. GitHub
   Pages) to give the team a URL
-- `gard fleet serve`: live web dashboard on localhost with a JSON API
-  (`/api/status`) that recomputes fleet state per request; the page polls
-  every 30 seconds — no external web framework, built on the existing
-  tokio runtime
+- `gard fleet serve`: live web dashboard with a JSON API (`/api/status`)
+  that recomputes fleet state per request; the page polls every 30
+  seconds — no external web framework, built on the existing tokio runtime
+- Hosted fleet mode: `serve --bind/--token` exposes the dashboard and a
+  `POST /api/submit` endpoint for teams; submissions are verified
+  (Ed25519 signature, and roster membership when a team is configured)
+  before being stored, and non-localhost binding without a token is
+  refused. `gard fleet submit --url/--token` submits over HTTP; the
+  dashboard prompts for the bearer token in the browser
 - `gard team add/list/remove`: trusted signer roster stored in policy.toml,
   so distributing one policy file distributes the trust anchors
 - `[team]` and `[fleet]` policy sections

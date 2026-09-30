@@ -297,12 +297,27 @@ page reloads itself every 5 minutes — so serving the fleet directory (for
 example with GitHub Pages on the shared repo) gives the team a URL to
 check daily without running any server.
 
-`serve` runs the same dashboard as a live web app at
-`http://127.0.0.1:8787/` (default port), backed by a JSON API at
-`/api/status` that recomputes fleet state from the directory on every
-request; the page polls it every 30 seconds. It binds to localhost only,
-by design — pair it with the shared fleet directory (synced folder or git
-repo) so each member's local dashboard shows the whole team live.
+`serve` runs the dashboard as a live web app backed by two APIs:
+`GET /api/status` recomputes fleet state on every request (the page polls
+it every 30 seconds), and `POST /api/submit` accepts members' signed
+reports over HTTP — no shared folder needed. The server verifies each
+submission's Ed25519 signature and, when a team roster is configured,
+refuses reports signed by unregistered keys, so a forged or tampered
+"all green" report is rejected at the door.
+
+Local use binds to `127.0.0.1` by default. To host for a team:
+
+```bash
+# On a VPS (put TLS in front with a reverse proxy):
+gard fleet serve --dir /var/gard-fleet --bind 0.0.0.0 --token "$FLEET_TOKEN"
+
+# Each member:
+gard fleet submit --url https://fleet.yourteam.dev --token "$FLEET_TOKEN"
+```
+
+Binding beyond localhost without `--token` is refused. The dashboard page
+itself is a data-free shell; it prompts for the token in the browser and
+sends it as a bearer header on API calls.
 
 ### gard team
 

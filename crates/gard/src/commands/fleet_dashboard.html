@@ -114,6 +114,20 @@ button.theme {
   border-radius: 6px; padding: 3px 10px; font: inherit; font-size: 12px; cursor: pointer;
 }
 button.theme:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 1px; }
+.tokenform {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+  padding: 14px; display: grid; gap: 8px; max-width: 420px;
+}
+.tokenrow { display: flex; gap: 8px; }
+.tokenrow input {
+  flex: 1; min-width: 0; border: 1px solid var(--grid); border-radius: 6px;
+  background: var(--page); color: var(--ink); padding: 6px 10px; font: inherit;
+}
+.tokenrow button {
+  border: 1px solid var(--border); background: var(--surface); color: var(--ink);
+  border-radius: 6px; padding: 6px 14px; font: inherit; font-weight: 600; cursor: pointer;
+}
+.tokenerr { color: var(--critical); font-size: 12.5px; }
 @media (max-width: 480px) { .tile .value { font-size: 22px; } }
 </style>
 </head>
@@ -125,6 +139,14 @@ button.theme:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 1p
     <button class="theme" id="themebtn" type="button">Theme</button>
   </header>
   <div class="banner" id="banner">Loading fleet status…</div>
+  <form class="tokenform" id="tokenform" hidden>
+    <label for="tokeninput">This fleet server requires an access token.</label>
+    <div class="tokenrow">
+      <input id="tokeninput" type="password" autocomplete="off" placeholder="Access token">
+      <button type="submit">Unlock</button>
+    </div>
+    <span class="tokenerr" id="tokenerr" hidden>Token rejected — check with your fleet admin.</span>
+  </form>
   <section class="tiles" id="tiles"></section>
   <section class="tablewrap">
     <table aria-describedby="generated">
@@ -245,11 +267,33 @@ try {
 } catch (e) {}
 
 if (DATA === null) {
+  const tokenForm = document.getElementById("tokenform");
+  const tokenErr = document.getElementById("tokenerr");
+  let token = "";
+  try { token = localStorage.getItem("gard-token") || ""; } catch (e) {}
+
   const poll = () =>
-    fetch("api/status")
-      .then((r) => r.json())
+    fetch("api/status", token ? { headers: { Authorization: "Bearer " + token } } : {})
+      .then((r) => {
+        if (r.status === 401) {
+          tokenForm.hidden = false;
+          tokenErr.hidden = !token;
+          document.getElementById("banner").textContent = "Locked — enter the fleet access token.";
+          throw new Error("unauthorized");
+        }
+        tokenForm.hidden = true;
+        return r.json();
+      })
       .then((d) => { DATA = d; render(); })
       .catch(() => {});
+
+  tokenForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    token = document.getElementById("tokeninput").value.trim();
+    try { localStorage.setItem("gard-token", token); } catch (err) {}
+    poll();
+  });
+
   poll();
   setInterval(poll, 30000);
 } else {
