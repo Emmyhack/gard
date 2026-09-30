@@ -34,9 +34,6 @@
   --serious-wash: rgba(236, 131, 90, 0.14);
   --critical-wash: rgba(224, 82, 82, 0.13);
   --cell-0: rgba(255, 255, 255, 0.04);
-  --hero-a: #6d21d6;
-  --hero-b: #b105e1;
-  --hero-c: #ff7e5f;
   color-scheme: dark;
 }
 @media (prefers-color-scheme: light) {
@@ -118,7 +115,7 @@ body {
 .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
 .brand-mark {
   width: 32px; height: 32px; border-radius: 9px; flex: none;
-  background: linear-gradient(135deg, var(--hero-a), var(--hero-b));
+  background: var(--accent);
   display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 15px;
 }
 .brand-name { font-weight: 800; font-size: 16px; letter-spacing: -0.02em; }
@@ -170,28 +167,23 @@ button.ghost:focus-visible { outline: 2px solid var(--accent); outline-offset: 1
 
 /* ---------- Hero ---------- */
 .hero {
-  position: relative; overflow: hidden; border-radius: 14px;
+  border-radius: 14px;
   border: 1px solid var(--line);
-  background:
-    radial-gradient(420px 200px at 85% -20%, color-mix(in oklab, var(--hero-c) 38%, transparent), transparent 70%),
-    radial-gradient(520px 260px at 70% 120%, color-mix(in oklab, var(--hero-b) 42%, transparent), transparent 72%),
-    radial-gradient(640px 300px at 18% 50%, color-mix(in oklab, var(--hero-a) 45%, transparent), transparent 75%),
-    var(--panel);
+  border-left: 4px solid var(--accent);
+  background: var(--panel);
   padding: 22px 20px;
   display: flex; flex-wrap: wrap; gap: 14px 24px; align-items: center;
 }
 .hero .state { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; margin: 0; }
 .hero .detail { color: var(--ink-2); font-size: 13px; max-width: 46ch; }
 .hero-copy { min-width: 0; }
-.ring {
-  --ring-color: var(--good);
-  width: 92px; height: 92px; border-radius: 50%; flex: none;
-  background: conic-gradient(var(--ring-color) calc(var(--pct) * 1%), rgba(127, 127, 127, 0.18) 0);
-  display: grid; place-items: center;
-  transition: background 0.4s;
-}
+.ring { position: relative; width: 92px; height: 92px; flex: none; }
+.ring svg { transform: rotate(-90deg); display: block; }
+.ring-track { fill: none; stroke: rgba(127, 127, 127, 0.22); stroke-width: 8; }
+.ring-arc { fill: none; stroke: var(--good); stroke-width: 8; stroke-linecap: round;
+            transition: stroke-dashoffset 0.4s, stroke 0.4s; }
 .ring-in {
-  width: 72px; height: 72px; border-radius: 50%; background: var(--panel);
+  position: absolute; inset: 0;
   display: grid; place-items: center; align-content: center; text-align: center;
 }
 .ring-in b { font-size: 19px; font-weight: 800; letter-spacing: -0.02em; line-height: 1; }
@@ -360,7 +352,11 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
     <div class="grid">
       <div class="col">
         <section class="hero" id="hero">
-          <div class="ring" id="ring" style="--pct:0">
+          <div class="ring" id="ring">
+            <svg viewBox="0 0 92 92" width="92" height="92" aria-hidden="true">
+              <circle class="ring-track" cx="46" cy="46" r="40"></circle>
+              <circle class="ring-arc" id="ring-arc" cx="46" cy="46" r="40"></circle>
+            </svg>
             <span class="ring-in"><b id="ring-num">—</b><i>passing</i></span>
           </div>
           <div class="hero-copy">
@@ -461,12 +457,14 @@ function render() {
   const failing = members.filter((m) => !memberState(m).cls.match(/^pass$/)).length;
   const badge = document.getElementById("hero-badge");
   badge.hidden = false;
-  const ring = document.getElementById("ring");
   const passingCount = members.length - failing;
   const pct = members.length ? Math.round((passingCount / members.length) * 100) : 0;
-  ring.style.setProperty("--pct", pct);
-  ring.style.setProperty("--ring-color",
-    pct === 100 ? "var(--good)" : pct >= 50 ? "var(--warning)" : "var(--critical)");
+  const arc = document.getElementById("ring-arc");
+  const circumference = 2 * Math.PI * 40;
+  arc.style.strokeDasharray = circumference;
+  arc.style.strokeDashoffset = circumference * (1 - pct / 100);
+  arc.style.stroke =
+    pct === 100 ? "var(--good)" : pct >= 50 ? "var(--warning)" : "var(--critical)";
   document.getElementById("ring-num").textContent = members.length ? pct + "%" : "—";
   if (members.length === 0) {
     document.getElementById("hero-state").textContent = "No reports yet";
