@@ -122,6 +122,21 @@ pub enum FleetSubcommand {
         dir: Option<String>,
     },
 
+    /// Generate a self-contained HTML dashboard from the fleet directory
+    Dashboard {
+        /// Fleet directory (defaults to [fleet] dir in policy)
+        #[arg(long)]
+        dir: Option<String>,
+
+        /// Reports older than this many hours are flagged stale
+        #[arg(long)]
+        max_age_hours: Option<u64>,
+
+        /// Write to this path (default: <fleet-dir>/index.html)
+        #[arg(short, long)]
+        output: Option<String>,
+    },
+
     /// Show compliance status for all submitted fleet reports
     Status {
         /// Fleet directory (defaults to [fleet] dir in policy)

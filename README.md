@@ -281,11 +281,20 @@ File-based team compliance over a shared directory.
 ```bash
 gard fleet submit [--dir <PATH>]
 gard fleet status [--dir <PATH>] [--max-age-hours <N>] [--json]
+gard fleet dashboard [--dir <PATH>] [--max-age-hours <N>] [-o <PATH>]
 ```
 
 `submit` runs a fresh scan and writes the signed report as
 `<user>@<host>.json`. `status` verifies signatures, flags stale (default
 24h) and failing members, and exits `0` only when the fleet is green.
+
+`dashboard` renders the same view into a self-contained `index.html` in the
+fleet directory: summary tiles, per-member status, expiring suppressions,
+and new/resolved findings, in light and dark themes with no external
+dependencies. Once generated, every `fleet submit` refreshes it, and the
+page reloads itself every 5 minutes — so serving the fleet directory (for
+example with GitHub Pages on the shared repo) gives the team a URL to
+check daily without running any server.
 
 ### gard team
 

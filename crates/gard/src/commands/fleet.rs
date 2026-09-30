@@ -34,6 +34,11 @@ pub async fn execute(subcommand: FleetSubcommand) -> Result<i32> {
             max_age_hours,
             json,
         } => status(&policy, dir, max_age_hours, json),
+        FleetSubcommand::Dashboard {
+            dir,
+            max_age_hours,
+            output,
+        } => dashboard(&policy, dir, max_age_hours, output),
     }
 }
 
@@ -61,6 +66,15 @@ async fn submit(policy: &Policy, dir: Option<String>) -> Result<i32> {
     }
 
     fs::write(&path, serde_json::to_string_pretty(&report)?)?;
+
+    // Keep a previously generated dashboard current with every submission
+    let dashboard_path = fleet_dir.join("index.html");
+    if dashboard_path.exists() {
+        let max_age = policy.fleet.max_age_hours.unwrap_or(DEFAULT_MAX_AGE_HOURS) as i64;
+        let members = collect_members(policy, &fleet_dir, max_age)?;
+        fs::write(&dashboard_path, render_dashboard(&members, max_age))?;
+        println!("Dashboard refreshed: {}", dashboard_path.display());
+    }
 
     let status = if report.summary.preflight_passing {
         "PASS".green().bold()
@@ -132,31 +146,7 @@ fn status(
         .or(policy.fleet.max_age_hours)
         .unwrap_or(DEFAULT_MAX_AGE_HOURS) as i64;
 
-    let mut members = Vec::new();
-    let mut entries: Vec<PathBuf> = fs::read_dir(&fleet_dir)?
-        .flatten()
-        .map(|e| e.path())
-        .filter(|p| p.is_file() && p.extension().map(|e| e == "json").unwrap_or(false))
-        .collect();
-    entries.sort();
-
-    for path in entries {
-        let Ok(content) = fs::read_to_string(&path) else {
-            continue;
-        };
-        let Ok(report) = serde_json::from_str::<Report>(&content) else {
-            tracing::warn!(file = %path.display(), "Skipping unparseable fleet report");
-            continue;
-        };
-        let previous = load_previous(&fleet_dir, &path);
-        members.push(evaluate_member(
-            &path,
-            &report,
-            previous.as_ref(),
-            policy,
-            max_age,
-        ));
-    }
+    let members = collect_members(policy, &fleet_dir, max_age)?;
 
     if members.is_empty() {
         println!(
@@ -196,6 +186,97 @@ fn status(
     }
 
     Ok(if all_green { 0 } else { 1 })
+}
+
+/// Read and evaluate every member report in the fleet directory
+fn collect_members(policy: &Policy, fleet_dir: &Path, max_age: i64) -> Result<Vec<MemberStatus>> {
+    let mut members = Vec::new();
+    let mut entries: Vec<PathBuf> = fs::read_dir(fleet_dir)?
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| p.is_file() && p.extension().map(|e| e == "json").unwrap_or(false))
+        .collect();
+    entries.sort();
+
+    for path in entries {
+        let Ok(content) = fs::read_to_string(&path) else {
+            continue;
+        };
+        let Ok(report) = serde_json::from_str::<Report>(&content) else {
+            tracing::warn!(file = %path.display(), "Skipping unparseable fleet report");
+            continue;
+        };
+        let previous = load_previous(fleet_dir, &path);
+        members.push(evaluate_member(
+            &path,
+            &report,
+            previous.as_ref(),
+            policy,
+            max_age,
+        ));
+    }
+
+    Ok(members)
+}
+
+fn dashboard(
+    policy: &Policy,
+    dir: Option<String>,
+    max_age_hours: Option<u64>,
+    output: Option<String>,
+) -> Result<i32> {
+    let fleet_dir = resolve_fleet_dir(policy, dir)?;
+    if !fleet_dir.exists() {
+        return Err(GardError::ConfigurationError {
+            path: fleet_dir.to_string_lossy().to_string(),
+            reason: "Fleet directory does not exist".to_string(),
+        });
+    }
+
+    let max_age = max_age_hours
+        .or(policy.fleet.max_age_hours)
+        .unwrap_or(DEFAULT_MAX_AGE_HOURS) as i64;
+
+    let members = collect_members(policy, &fleet_dir, max_age)?;
+    let output_path = output
+        .map(PathBuf::from)
+        .unwrap_or_else(|| fleet_dir.join("index.html"));
+    fs::write(&output_path, render_dashboard(&members, max_age))?;
+
+    println!(
+        "Dashboard written to {} ({} member report(s)).",
+        output_path.display(),
+        members.len()
+    );
+    println!(
+        "Open it locally, or serve the fleet directory (e.g. GitHub Pages) to give the team a URL."
+    );
+    if fleet_dir.join(".git").exists() {
+        println!("Fleet directory is a git repository — remember to commit and push.");
+    }
+
+    Ok(0)
+}
+
+/// Render the fleet view into the self-contained HTML template
+fn render_dashboard(members: &[MemberStatus], max_age: i64) -> String {
+    let all_green = !members.is_empty()
+        && members
+            .iter()
+            .all(|m| m.signature_valid && m.preflight_passing && !m.stale);
+
+    let payload = serde_json::json!({
+        "generated_at": chrono::Utc::now(),
+        "max_age_hours": max_age,
+        "all_green": all_green,
+        "members": members,
+    });
+    let json = serde_json::to_string(&payload)
+        .unwrap_or_else(|_| "{}".to_string())
+        // Prevent a value containing "</script>" from closing the tag
+        .replace("</", "<\\/");
+
+    include_str!("fleet_dashboard.html").replace("__GARD_DATA__", &json)
 }
 
 fn load_previous(fleet_dir: &Path, current: &Path) -> Option<Report> {
@@ -438,6 +519,22 @@ mod tests {
         let (new_ids, resolved) = diff_check_ids(&previous, &current);
         assert!(new_ids.is_empty());
         assert_eq!(resolved, vec!["open-ports-remote-access".to_string()]);
+    }
+
+    #[test]
+    fn test_render_dashboard_embeds_data() {
+        let report = report_with_checks(&["ssh-key-hygiene"]);
+        let member = evaluate_member(
+            Path::new("/tmp/u@h.json"),
+            &report,
+            None,
+            &crate::types::Policy::default(),
+            24,
+        );
+        let html = render_dashboard(&[member], 24);
+        assert!(html.contains("ssh-key-hygiene") || html.contains("\"member\""));
+        assert!(html.contains("Gard Fleet"));
+        assert!(!html.contains("__GARD_DATA__"));
     }
 
     #[test]
