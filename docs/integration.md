@@ -11,8 +11,8 @@ Follow these steps to add Gard to your contributor onboarding checklist and sign
 ### Step-by-step Onboarding Process
 
 1. **Send onboarding document** to new contributor with Gard installation instructions.
-   - Install from binary: `curl -L https://github.com/nextlevelbuilder/gard/releases/download/v0.1.0/gard-x86_64-apple-darwin -o gard && chmod +x gard && sudo mv gard /usr/local/bin/`
-   - Or from source: `git clone https://github.com/nextlevelbuilder/gard.git && cd gard && cargo build --release`
+   - Install from binary: `curl -L https://github.com/Emmyhack/gard/releases/download/v0.1.0/gard-x86_64-apple-darwin -o gard && chmod +x gard && sudo mv gard /usr/local/bin/`
+   - Or from source: `git clone https://github.com/Emmyhack/gard.git && cd gard && cargo build --release`
    - Verify: `gard --version`
 
 2. **Contributor runs initial audit** on their development machine.
@@ -239,7 +239,7 @@ jobs:
       - name: Install Gard
         if: steps.cache-gard.outputs.cache-hit != 'true'
         run: |
-          curl -L https://github.com/nextlevelbuilder/gard/releases/download/v0.1.0/gard-x86_64-unknown-linux-gnu -o gard
+          curl -L https://github.com/Emmyhack/gard/releases/download/v0.1.0/gard-x86_64-unknown-linux-gnu -o gard
           chmod +x gard
           mkdir -p ~/.cargo/bin && mv gard ~/.cargo/bin/
       
@@ -525,7 +525,7 @@ Procedure for rolling out new Gard versions to all contributors.
 2. **Download new version**:
    ```bash
    # macOS x86_64
-   curl -L https://github.com/nextlevelbuilder/gard/releases/download/v0.2.0/gard-x86_64-apple-darwin -o gard-new
+   curl -L https://github.com/Emmyhack/gard/releases/download/v0.2.0/gard-x86_64-apple-darwin -o gard-new
    chmod +x gard-new
    
    # Verify signature (if available)

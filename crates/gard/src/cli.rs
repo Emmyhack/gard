@@ -115,16 +115,24 @@ pub struct FleetCommand {
 
 #[derive(Subcommand, Clone)]
 pub enum FleetSubcommand {
-    /// Run a fresh scan and submit the signed report to the fleet directory
+    /// Run a fresh scan and submit the signed report to the fleet
     Submit {
-        /// Fleet directory (defaults to [fleet] dir in policy)
+        /// Fleet directory (defaults to `[fleet] dir` in policy)
         #[arg(long)]
         dir: Option<String>,
+
+        /// Submit to a fleet server over HTTP instead of a directory
+        #[arg(long, conflicts_with = "dir")]
+        url: Option<String>,
+
+        /// Bearer token for the fleet server
+        #[arg(long)]
+        token: Option<String>,
     },
 
     /// Generate a self-contained HTML dashboard from the fleet directory
     Dashboard {
-        /// Fleet directory (defaults to [fleet] dir in policy)
+        /// Fleet directory (defaults to `[fleet] dir` in policy)
         #[arg(long)]
         dir: Option<String>,
 
@@ -137,15 +145,23 @@ pub enum FleetSubcommand {
         output: Option<String>,
     },
 
-    /// Serve a live fleet dashboard over HTTP on localhost
+    /// Serve the live fleet dashboard and submission API over HTTP
     Serve {
-        /// Fleet directory (defaults to [fleet] dir in policy)
+        /// Fleet directory (defaults to `[fleet] dir` in policy)
         #[arg(long)]
         dir: Option<String>,
 
-        /// Port to listen on (localhost only)
+        /// Port to listen on
         #[arg(long, default_value = "8787")]
         port: u16,
+
+        /// Address to bind. Non-localhost requires --token.
+        #[arg(long, default_value = "127.0.0.1")]
+        bind: String,
+
+        /// Bearer token protecting the API (required off localhost)
+        #[arg(long)]
+        token: Option<String>,
 
         /// Reports older than this many hours are flagged stale
         #[arg(long)]
@@ -154,7 +170,7 @@ pub enum FleetSubcommand {
 
     /// Show compliance status for all submitted fleet reports
     Status {
-        /// Fleet directory (defaults to [fleet] dir in policy)
+        /// Fleet directory (defaults to `[fleet] dir` in policy)
         #[arg(long)]
         dir: Option<String>,
 
@@ -225,10 +241,6 @@ pub struct ScanCommand {
 
 #[derive(Parser, Clone)]
 pub struct PreflightCommand {
-    /// Confirm preflight passed and prepare for signing
-    #[arg(long)]
-    pub sign: bool,
-
     /// Explicit confirmation that findings addressed
     #[arg(long)]
     pub confirm: bool,

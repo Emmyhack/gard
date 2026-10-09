@@ -7,7 +7,7 @@
 use crate::cli::UpdateCommand;
 use crate::error::{GardError, Result};
 
-const RELEASES_API: &str = "https://api.github.com/repos/nextlevelbuilder/gard/releases/latest";
+const RELEASES_API: &str = "https://api.github.com/repos/Emmyhack/gard/releases/latest";
 
 pub async fn execute(cmd: UpdateCommand) -> Result<i32> {
     if cmd.channel != "stable" {
@@ -45,10 +45,7 @@ pub async fn execute(cmd: UpdateCommand) -> Result<i32> {
     // Binary self-replacement with signature verification lands in v0.2.
     println!("\nAutomatic self-update is not available in this version.");
     println!("Install the new release manually:");
-    println!(
-        "  https://github.com/nextlevelbuilder/gard/releases/tag/{}",
-        latest
-    );
+    println!("  https://github.com/Emmyhack/gard/releases/tag/{}", latest);
     println!("Verify the .sha256 checksum before replacing the binary.");
     Ok(0)
 }
@@ -72,6 +69,12 @@ async fn fetch_latest_version() -> Result<String> {
             reason: e.to_string(),
         })?;
 
+    if response.status() == reqwest::StatusCode::NOT_FOUND {
+        return Err(GardError::NetworkError {
+            endpoint: RELEASES_API.to_string(),
+            reason: "no published releases yet".to_string(),
+        });
+    }
     if !response.status().is_success() {
         return Err(GardError::NetworkError {
             endpoint: RELEASES_API.to_string(),

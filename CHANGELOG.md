@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-09
+
 ### Added
 - `gard attest`: signed, time-boxed machine-posture attestations bound to a
   ceremony id; refused when blocking findings exist (no override)
@@ -23,28 +25,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   theme-aware `index.html` (no server, no external dependencies) that
   `fleet submit` keeps refreshed; serve the fleet directory (e.g. GitHub
   Pages) to give the team a URL
-- `gard fleet serve`: live web dashboard on localhost with a JSON API
-  (`/api/status`) that recomputes fleet state per request; the page polls
-  every 30 seconds — no external web framework, built on the existing
-  tokio runtime
+- `gard fleet serve`: live web dashboard with a JSON API (`/api/status`)
+  that recomputes fleet state per request; the page polls every 30
+  seconds — no external web framework, built on the existing tokio runtime
+- Hosted fleet mode: `serve --bind/--token` exposes the dashboard and a
+  `POST /api/submit` endpoint for teams; submissions are verified
+  (Ed25519 signature, and roster membership when a team is configured)
+  before being stored, and non-localhost binding without a token is
+  refused. `gard fleet submit --url/--token` submits over HTTP; the
+  dashboard prompts for the bearer token in the browser
 - `gard team add/list/remove`: trusted signer roster stored in policy.toml,
   so distributing one policy file distributes the trust anchors
 - `[team]` and `[fleet]` policy sections
 
+
+
+
+
+
+### Added (production pass)
+- `macos-testflight-apps` check: detects TestFlight beta builds via their
+  embedded beta provisioning profile; wallet/signing apps block preflight.
+- `Dockerfile` for hosted fleet server deployments, with a health check.
+
 ### Changed
-- Placeholder for future improvements
+- `env-key-leakage` reports generic credential variables (`*_TOKEN`,
+  `*_API_KEY`) only when the value is shaped like key material; names that
+  unambiguously denote keys still block. Base58 detection now covers the
+  full alphabet (lowercase was missing, so real keys never matched).
+- `unsigned-binaries-in-path` summarizes package-managed installs (Homebrew,
+  cargo, pipx, nix) in one informational finding; only unmanaged, unsigned
+  recent binaries block preflight.
+- `software-wallet-detection` no longer flags the Solana CLI directory or
+  Ledger Live.
+- `solana-cli-config` honors `[solana] trusted_rpc_endpoints` from policy.
+- `--data-dir`, `--config`, and `--no-color` are honored; `GARD_DATA_DIR` and
+  `GARD_CONFIG` provide the same overrides.
+- `gard config set` implemented for policy values.
+- Removed the no-op `preflight --sign` flag.
+- Version 0.2.0; repository and release URLs point at `Emmyhack/gard`.
+- `Cargo.lock` is committed for reproducible builds.
 
 ### Fixed
-- Placeholder for future fixes
-
-### Deprecated
-- Placeholder for future deprecations
-
-### Removed
-- Placeholder for future removals
+- CI triggered on branches that do not exist (`main`/`develop`); it now
+  runs on `master`. The release workflow uses current artifact actions.
+- `deny.toml` updated to the current cargo-deny schema.
+- The signing key file is created owner-only in one step instead of being
+  written and then chmod'ed; the public key file is labeled
+  `ed25519 <hex>` rather than claiming OpenSSH format.
 
 ### Security
-- Placeholder for future security fixes
+- Fleet server: request read/write timeouts, a 256-connection cap, security
+  headers (CSP, nosniff, frame-ancestors none, no-referrer), `/healthz`,
+  per-request logging, and graceful shutdown on Ctrl-C.
+- Fleet submissions from rostered members are stored under the roster name
+  bound to their signing key, so one member cannot overwrite another's
+  report by forging the username/hostname fields.
 
 ## [0.1.0] - 2026-04-16
 

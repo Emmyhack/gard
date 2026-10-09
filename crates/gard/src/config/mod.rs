@@ -25,13 +25,7 @@ pub fn load_policy(path: Option<&str>) -> Result<Policy> {
 }
 
 pub fn get_default_policy_path() -> Result<PathBuf> {
-    let gard_dir = dirs::home_dir()
-        .ok_or_else(|| {
-            crate::error::GardError::Internal("Could not determine home directory".to_string())
-        })?
-        .join(".gard");
-
-    Ok(gard_dir.join("policy.toml"))
+    crate::paths::policy_path()
 }
 
 impl Default for Policy {
@@ -41,6 +35,7 @@ impl Default for Policy {
         // Default: all checks enforced
         checks.insert("vscode-workspace-trust".to_string(), "enforce".to_string());
         checks.insert("vscode-extension-audit".to_string(), "enforce".to_string());
+        checks.insert("macos-testflight-apps".to_string(), "enforce".to_string());
         checks.insert(
             "clipboard-monitor-detection".to_string(),
             "enforce".to_string(),

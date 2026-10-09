@@ -8,7 +8,8 @@ If you discover a security vulnerability in Gard, please report it responsibly t
 
 ## Reporting Process
 
-1. Email security@example.com (replace with actual contact) with:
+1. Use GitHub private vulnerability reporting on this repository
+   (Security tab → "Report a vulnerability"), including:
    - Description of the vulnerability
    - Steps to reproduce
    - Potential impact

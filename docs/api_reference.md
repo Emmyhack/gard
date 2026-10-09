@@ -461,7 +461,7 @@ pub fn verify_report(report: &Report) -> Result<bool>;
 
 **Keypair Storage:**
 - Private key: `~/.gard/keys/ed25519` (32 bytes)
-- Public key: `~/.gard/keys/ed25519.pub` (OpenSSH format)
+- Public key: `~/.gard/keys/ed25519.pub` (`ed25519 <hex>`)
 
 ---
 

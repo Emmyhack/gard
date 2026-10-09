@@ -79,11 +79,9 @@ impl SoftwareWalletsCheck {
                 ("Exodus", apps.join("Exodus.app")),
                 ("Electrum", apps.join("Electrum.app")),
                 ("Atomic Wallet", apps.join("Atomic Wallet.app")),
-                ("Ledger Live", apps.join("Ledger Live.app")),
                 ("Trust Wallet", apps.join("Trust Wallet.app")),
                 ("Exodus data", app_support.join("Exodus")),
                 ("Electrum data", home.join(".electrum")),
-                ("Solana CLI keypair dir", home.join(".config/solana")),
             ]);
         }
 
@@ -93,7 +91,6 @@ impl SoftwareWalletsCheck {
                 ("Exodus data", home.join(".config/Exodus")),
                 ("Electrum data", home.join(".electrum")),
                 ("Atomic Wallet data", home.join(".config/atomic")),
-                ("Solana CLI keypair dir", home.join(".config/solana")),
             ]);
         }
 

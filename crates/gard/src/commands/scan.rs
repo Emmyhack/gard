@@ -168,10 +168,7 @@ pub fn parse_check_list(input: Option<&str>) -> HashSet<String> {
 
 /// Cache path for the most recent scan
 pub fn last_scan_path() -> Result<PathBuf> {
-    let gard_dir = dirs::home_dir()
-        .ok_or_else(|| GardError::Internal("Could not determine home directory".to_string()))?
-        .join(".gard");
-    Ok(gard_dir.join("cache").join("last_scan.json"))
+    crate::paths::last_scan_path()
 }
 
 fn save_last_scan(report: &Report) -> Result<()> {

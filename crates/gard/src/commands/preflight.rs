@@ -118,11 +118,10 @@ fn print_finding_line(finding: &crate::types::Finding) {
 
 /// Append override justifications to an audit log for later review
 fn record_override(reason: &str, blocking_count: usize) -> Result<()> {
-    let Some(home) = dirs::home_dir() else {
-        return Ok(());
-    };
-    let gard_dir = home.join(".gard");
-    fs::create_dir_all(&gard_dir)?;
+    let log_path = crate::paths::override_log_path()?;
+    if let Some(parent) = log_path.parent() {
+        fs::create_dir_all(parent)?;
+    }
     let entry = format!(
         "{} override blocking_findings={} reason={:?}\n",
         chrono::Utc::now().to_rfc3339(),
@@ -133,7 +132,7 @@ fn record_override(reason: &str, blocking_count: usize) -> Result<()> {
     let mut file = fs::OpenOptions::new()
         .create(true)
         .append(true)
-        .open(gard_dir.join("override.log"))?;
+        .open(&log_path)?;
     file.write_all(entry.as_bytes())?;
     Ok(())
 }

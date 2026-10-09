@@ -8,7 +8,7 @@ Gard was conceived from the Drift Protocol attack of April 1, 2026, a $285M expl
 
 - VSCode workspace trust bypass and auto-run task injection
 - Malicious VSCode extensions against known-malicious and high-risk extension lists
-- TestFlight and sideloaded applications on macOS
+- TestFlight beta builds of wallet and signing applications on macOS
 - Software wallets that can be exfiltration targets
 - Clipboard monitoring and address hijacking processes
 - Keypair material leaked in environment variables or shell profiles
@@ -24,26 +24,26 @@ Gard was conceived from the Drift Protocol attack of April 1, 2026, a $285M expl
 
 ### From Binary (Recommended)
 
-Download the latest binary for your platform from [GitHub Releases](https://github.com/nextlevelbuilder/gard/releases):
+Download the latest binary for your platform from [GitHub Releases](https://github.com/Emmyhack/gard/releases):
 
 ```bash
 # macOS x86_64
-curl -L https://github.com/nextlevelbuilder/gard/releases/download/v0.1.0/gard-x86_64-apple-darwin -o gard
+curl -L https://github.com/Emmyhack/gard/releases/download/v0.2.0/gard-x86_64-apple-darwin -o gard
 chmod +x gard
 sudo mv gard /usr/local/bin/
 
 # macOS ARM64
-curl -L https://github.com/nextlevelbuilder/gard/releases/download/v0.1.0/gard-aarch64-apple-darwin -o gard
+curl -L https://github.com/Emmyhack/gard/releases/download/v0.2.0/gard-aarch64-apple-darwin -o gard
 chmod +x gard
 sudo mv gard /usr/local/bin/
 
 # Linux x86_64
-curl -L https://github.com/nextlevelbuilder/gard/releases/download/v0.1.0/gard-x86_64-unknown-linux-gnu -o gard
+curl -L https://github.com/Emmyhack/gard/releases/download/v0.2.0/gard-x86_64-unknown-linux-gnu -o gard
 chmod +x gard
 sudo mv gard /usr/local/bin/
 
 # Linux ARM64
-curl -L https://github.com/nextlevelbuilder/gard/releases/download/v0.1.0/gard-aarch64-unknown-linux-gnu -o gard
+curl -L https://github.com/Emmyhack/gard/releases/download/v0.2.0/gard-aarch64-unknown-linux-gnu -o gard
 chmod +x gard
 sudo mv gard /usr/local/bin/
 ```
@@ -51,7 +51,7 @@ sudo mv gard /usr/local/bin/
 Verify checksum (critical for security tools):
 
 ```bash
-curl -L https://github.com/nextlevelbuilder/gard/releases/download/v0.1.0/gard-x86_64-apple-darwin.sha256 -o gard.sha256
+curl -L https://github.com/Emmyhack/gard/releases/download/v0.2.0/gard-x86_64-apple-darwin.sha256 -o gard.sha256
 sha256sum -c gard.sha256
 ```
 
@@ -60,7 +60,7 @@ sha256sum -c gard.sha256
 Requires Rust 1.70+:
 
 ```bash
-git clone https://github.com/nextlevelbuilder/gard.git
+git clone https://github.com/Emmyhack/gard.git
 cd gard
 cargo build --release
 ./target/release/gard --version
@@ -187,7 +187,6 @@ gard preflight [OPTIONS]
 ```
 
 Options:
-- `--sign`: Confirm preflight passed and prepare for signing
 - `--confirm`: Explicit confirmation that findings addressed
 - `--override <REASON>`: Override blocking findings with justification
 - `--config <PATH>`: Use custom configuration file
@@ -211,8 +210,11 @@ Subcommands:
 - `init`: Initialize default policy file
 - `show`: Display current policy
 - `validate`: Validate policy file
-- `check <NAME>`: Modify check enforcement status
-- `suppress <CHECK> --reason <TEXT> --until <DATE>`: Suppress finding
+- `list-checks`: List every check with its severity and blocking status
+- `check <NAME> [--level enforce|warn|silent]`: Show or set a check's enforcement level
+- `set <KEY> <VALUE>`: Set a policy value. Keys: `hardware_wallet.required`, `hardware_wallet.minimum_type`, `fleet.dir`, `fleet.max_age_hours`, `nonce.expected_authority`, `solana.trusted_rpc_endpoints` (comma-separated), `solana.self_hosted_rpc_required`
+- `suppress <CHECK> --reason <TEXT> --until <DATE>`: Suppress a check until a date
+- `unsuppress <CHECK>`: Remove a suppression
 
 ### gard report
 
@@ -276,33 +278,28 @@ Exit codes: `0` acceptable, `1` rejected.
 
 ### gard fleet
 
-File-based team compliance over a shared directory.
+Team compliance over a shared directory or a fleet server.
 
 ```bash
-gard fleet submit [--dir <PATH>]
+gard fleet submit [--dir <PATH>] | [--url <SERVER> --token <TOKEN>]
 gard fleet status [--dir <PATH>] [--max-age-hours <N>] [--json]
 gard fleet dashboard [--dir <PATH>] [--max-age-hours <N>] [-o <PATH>]
-gard fleet serve [--dir <PATH>] [--port <PORT>] [--max-age-hours <N>]
+gard fleet serve [--dir <PATH>] [--port 8787] [--bind 127.0.0.1] [--token <TOKEN>]
 ```
 
-`submit` runs a fresh scan and writes the signed report as
-`<user>@<host>.json`. `status` verifies signatures, flags stale (default
-24h) and failing members, and exits `0` only when the fleet is green.
+`submit` runs a fresh scan and stores the signed report (locally as
+`<user>@<host>.json`, or on a server under the member's roster name).
+`status` verifies signatures, flags stale (default 24h) and failing members,
+and exits `0` only when the fleet is green. `dashboard` writes a
+self-contained `index.html`.
 
-`dashboard` renders the same view into a self-contained `index.html` in the
-fleet directory: summary tiles, per-member status, expiring suppressions,
-and new/resolved findings, in light and dark themes with no external
-dependencies. Once generated, every `fleet submit` refreshes it, and the
-page reloads itself every 5 minutes — so serving the fleet directory (for
-example with GitHub Pages on the shared repo) gives the team a URL to
-check daily without running any server.
-
-`serve` runs the same dashboard as a live web app at
-`http://127.0.0.1:8787/` (default port), backed by a JSON API at
-`/api/status` that recomputes fleet state from the directory on every
-request; the page polls it every 30 seconds. It binds to localhost only,
-by design — pair it with the shared fleet directory (synced folder or git
-repo) so each member's local dashboard shows the whole team live.
+`serve` runs the live web dashboard plus a JSON API: `GET /api/status`,
+`POST /api/submit` (signed reports, verified against the team roster), and
+`GET /healthz` for uptime checks. Binding beyond localhost requires
+`--token`; terminate TLS in a reverse proxy. The server caps concurrent
+connections at 256, times out slow clients after 15 seconds, logs each
+request at `-L` (info) verbosity, and stops cleanly on Ctrl-C. A
+`Dockerfile` is included for hosted deployments.
 
 ### gard team
 
@@ -378,17 +375,17 @@ Each suppression entry requires:
 
 ## Data Directory
 
-Gard stores data at `~/.gard/`:
+Gard stores data at `~/.gard/` by default. Override with `--data-dir <PATH>` or `GARD_DATA_DIR`; use a different policy file with `--config <PATH>` or `GARD_CONFIG`. `--no-color` (or the standard `NO_COLOR` variable) disables colored output.
 
 ```
 ~/.gard/
   policy.toml           - Local policy configuration
   keys/
     ed25519            - Private key for report signing
-    ed25519.pub        - Public key (OpenSSH format)
+    ed25519.pub        - Public key (ed25519 <hex>)
   cache/
     last_scan.json     - Last scan result
-  update.log           - Update history
+  override.log         - Preflight override audit log
 ```
 
 ## Report Verification

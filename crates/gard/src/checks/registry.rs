@@ -32,6 +32,7 @@ impl CheckRegistry {
         registry.register(Arc::new(super::solana_nonce::SolanaNonceCheck));
         registry.register(Arc::new(super::hardware_wallet::HardwareWalletCheck));
         registry.register(Arc::new(super::browser_extensions::BrowserExtensionsCheck));
+        registry.register(Arc::new(super::testflight_apps::TestflightAppsCheck));
 
         registry
     }
@@ -112,7 +113,7 @@ mod tests {
     #[test]
     fn test_registry_registers_all_checks() {
         let registry = CheckRegistry::new();
-        assert_eq!(registry.all().len(), 12);
+        assert_eq!(registry.all().len(), 13);
         assert!(registry.get("env-key-leakage").is_some());
         assert!(registry.get("vscode-workspace-trust").is_some());
         assert!(registry.get("solana-durable-nonce-verify").is_some());
