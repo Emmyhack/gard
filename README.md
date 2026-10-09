@@ -301,6 +301,30 @@ connections at 256, times out slow clients after 15 seconds, logs each
 request at `-L` (info) verbosity, and stops cleanly on Ctrl-C. A
 `Dockerfile` is included for hosted deployments.
 
+Minimal TLS front-end with Caddy (automatic certificates):
+
+```
+fleet.yourteam.dev {
+    reverse_proxy 127.0.0.1:8787
+}
+```
+
+Or nginx:
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name fleet.yourteam.dev;
+    ssl_certificate     /etc/letsencrypt/live/fleet.yourteam.dev/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/fleet.yourteam.dev/privkey.pem;
+    location / { proxy_pass http://127.0.0.1:8787; }
+}
+```
+
+With a proxy in front, run the server bound to localhost (`--bind 127.0.0.1`,
+the default) and still pass `--token`; the proxy terminates TLS and the
+token gates the API.
+
 ### gard team
 
 Manage the trusted signer roster stored in `policy.toml` under `[team]`.
