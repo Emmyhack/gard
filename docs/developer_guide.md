@@ -356,6 +356,34 @@ cargo test -- --nocapture
 cargo test -- --verbose
 ```
 
+## Cross-Platform Checks
+
+CI compiles and tests on Linux and macOS. To exercise the Linux-only code paths
+(`cfg(target_os = "linux")`) from a Mac without Docker, let Apple's clang act as
+the cross C compiler that `ring` needs:
+
+```bash
+rustup target add x86_64-unknown-linux-gnu
+SDK=$(xcrun --show-sdk-path)
+export CC_x86_64_unknown_linux_gnu=clang
+export AR_x86_64_unknown_linux_gnu=ar
+export CFLAGS_x86_64_unknown_linux_gnu="--target=x86_64-unknown-linux-gnu -isystem $SDK/usr/include -Wno-everything"
+cargo check  --target x86_64-unknown-linux-gnu
+cargo clippy --target x86_64-unknown-linux-gnu --all-targets -- -D warnings
+```
+
+This type-checks and lints the Linux build; it does not produce a runnable
+binary (link with a real Linux toolchain or use CI for that).
+
+For Windows, install `mingw-w64` from Homebrew and check the GNU target:
+
+```bash
+rustup target add x86_64-pc-windows-gnu
+CC_x86_64_pc_windows_gnu=x86_64-w64-mingw32-gcc \
+AR_x86_64_pc_windows_gnu=x86_64-w64-mingw32-ar \
+cargo check --target x86_64-pc-windows-gnu
+```
+
 ## Dependency Management
 
 All dependencies are declared in `Cargo.toml` with justifications.

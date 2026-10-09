@@ -1,0 +1,5 @@
+# Keeps contributors and CI on the same channel with the components the
+# quality gates need; `rustup` picks this up automatically.
+[toolchain]
+channel = "stable"
+components = ["clippy", "rustfmt"]
