@@ -435,7 +435,7 @@ cat report.json | jq -c '.metadata | del(.signature, .public_key)' | \
 
 - macOS 12.0+ (x86_64, ARM64)
 - Linux 4.15+ (x86_64, ARM64)
-- Windows 10+ (x86_64) - Limited check support
+- Windows 10+ (x86_64) - builds and runs the test suite in CI; checks have limited coverage and have not been exercised on real Windows signer machines
 
 Some checks are platform-specific:
 - TestFlight detection: macOS only
