@@ -94,3 +94,22 @@ jobs:
       
       - name: Check formatting
         run: cargo fmt --all -- --check
+
+  docker:
+    name: Docker image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build fleet server image
+        run: docker build -t gard:ci .
+
+      - name: Smoke test container
+        run: |
+          cid=$(docker run -d -p 8787:8787 -e GARD_FLEET_TOKEN=ci-token gard:ci)
+          sleep 3
+          curl -fsS http://127.0.0.1:8787/healthz
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8787/api/status)" = "401"
+          test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Authorization: Bearer ci-token' http://127.0.0.1:8787/api/status)" = "200"
+          docker logs "$cid"
+          docker rm -f "$cid"
