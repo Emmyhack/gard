@@ -77,7 +77,16 @@ async fn submit(
 
     let fleet_dir = resolve_fleet_dir(policy, dir)?;
     fs::create_dir_all(&fleet_dir)?;
-    let file_name = store_report(&fleet_dir, &report, None)?;
+    // Key the file by roster identity when this machine's key is registered,
+    // matching the server, so a hostname change does not duplicate a member
+    let own_key = signer.public_key_hex();
+    let roster_name = policy
+        .team
+        .signers
+        .iter()
+        .find(|s| s.public_key.eq_ignore_ascii_case(&own_key))
+        .map(|s| s.name.clone());
+    let file_name = store_report(&fleet_dir, &report, roster_name.as_deref())?;
 
     // Keep a previously generated dashboard current with every submission
     let dashboard_path = fleet_dir.join("index.html");
