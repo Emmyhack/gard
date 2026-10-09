@@ -1,20 +1,14 @@
+[graph]
+all-features = true
+
 [advisories]
-# Fetch advisory database from RustSec
 db-path = "~/.cargo/advisory-db"
-db-urls = ["https://github.com/rustsec/advisory-db/raw/main/db.json.gz"]
-# Vulnerability severity threshold - fail on all security issues
-vulnerability = "deny"
-# Unmaintained crate policy - warn about unmaintained dependencies
-unmaintained = "warn"
-# Unsound dependency policy
-unsound = "deny"
-# Yanked version policy - deny yanked crates in use
-yanked = "deny"
-# Notice policy
-notice = "warn"
+db-urls = ["https://github.com/rustsec/advisory-db"]
+# Every advisory is an error unless explicitly ignored with a justification
+ignore = []
 
 [licenses]
-# Allowed license list - only permissive licenses for Gard
+# Only permissive licenses compatible with MIT distribution
 allow = [
     "MIT",
     "Apache-2.0",
@@ -23,26 +17,25 @@ allow = [
     "BSD-3-Clause",
     "ISC",
     "Unicode-DFS-2016",
+    "Unicode-3.0",
     "OpenSSL",
+    "Zlib",
+    "MPL-2.0",
+    "CDLA-Permissive-2.0",
 ]
-# Denied licenses - GPL and other copyleft not compatible with MIT
-deny = [
-    "GPL-2.0",
-    "GPL-3.0",
-    "AGPL-3.0",
-]
-# License policy for ambiguous cases
-copyleft = "warn"
-# Allow crates with only NOASSERTION or evaluation needed
-allow-osi-fsf-free = true
-default = "deny"
+confidence-threshold = 0.8
+
+[[licenses.clarify]]
+name = "ring"
+expression = "MIT AND ISC AND OpenSSL"
+license-files = [{ path = "LICENSE", hash = 0xbd0eed23 }]
 
 [bans]
-# Duplicate dependency checking
 multiple-versions = "warn"
-# Wildcard dependency versions
-wildcards = "warn"
-# Known insecure crates - explicitly denied
-deny = [
-    # Example: {name = "openssl-sys", reason = "Use rustls instead"}
-]
+wildcards = "deny"
+deny = []
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

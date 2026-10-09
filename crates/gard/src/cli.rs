@@ -117,7 +117,7 @@ pub struct FleetCommand {
 pub enum FleetSubcommand {
     /// Run a fresh scan and submit the signed report to the fleet
     Submit {
-        /// Fleet directory (defaults to [fleet] dir in policy)
+        /// Fleet directory (defaults to `[fleet] dir` in policy)
         #[arg(long)]
         dir: Option<String>,
 
@@ -132,7 +132,7 @@ pub enum FleetSubcommand {
 
     /// Generate a self-contained HTML dashboard from the fleet directory
     Dashboard {
-        /// Fleet directory (defaults to [fleet] dir in policy)
+        /// Fleet directory (defaults to `[fleet] dir` in policy)
         #[arg(long)]
         dir: Option<String>,
 
@@ -147,7 +147,7 @@ pub enum FleetSubcommand {
 
     /// Serve the live fleet dashboard and submission API over HTTP
     Serve {
-        /// Fleet directory (defaults to [fleet] dir in policy)
+        /// Fleet directory (defaults to `[fleet] dir` in policy)
         #[arg(long)]
         dir: Option<String>,
 
@@ -170,7 +170,7 @@ pub enum FleetSubcommand {
 
     /// Show compliance status for all submitted fleet reports
     Status {
-        /// Fleet directory (defaults to [fleet] dir in policy)
+        /// Fleet directory (defaults to `[fleet] dir` in policy)
         #[arg(long)]
         dir: Option<String>,
 
@@ -241,10 +241,6 @@ pub struct ScanCommand {
 
 #[derive(Parser, Clone)]
 pub struct PreflightCommand {
-    /// Confirm preflight passed and prepare for signing
-    #[arg(long)]
-    pub sign: bool,
-
     /// Explicit confirmation that findings addressed
     #[arg(long)]
     pub confirm: bool,

@@ -5,7 +5,6 @@ use crate::types::Report;
 use ed25519_dalek::{Signer, SigningKey};
 use rand::Rng;
 use std::fs;
-use std::path::PathBuf;
 use zeroize::Zeroize;
 
 #[cfg(unix)]
@@ -38,8 +37,10 @@ impl ReportSigner {
 
     /// Load existing keypair or create new one
     fn load_or_create_signing_key() -> Result<SigningKey> {
-        let key_path = Self::private_key_path()?;
-        let key_dir = key_path.parent().unwrap();
+        let key_path = crate::paths::private_key_path()?;
+        let key_dir = key_path.parent().ok_or_else(|| {
+            crate::error::GardError::Internal("Key path has no parent directory".to_string())
+        })?;
 
         if !key_dir.exists() {
             fs::create_dir_all(key_dir).map_err(crate::error::GardError::IoError)?;
@@ -71,22 +72,30 @@ impl ReportSigner {
             let seed: [u8; 32] = rng.gen();
             let signing_key = SigningKey::from_bytes(&seed);
 
-            // Save private key with restricted permissions
-            fs::write(&key_path, signing_key.to_bytes())
-                .map_err(crate::error::GardError::IoError)?;
-
-            // Set file permissions to 0600 (owner read/write only)
+            // Create the key file owner-only from the first byte, so there is
+            // no window in which another user could read the seed
+            let mut options = fs::OpenOptions::new();
+            options.write(true).create_new(true);
             #[cfg(unix)]
             {
-                let permissions = std::fs::Permissions::from_mode(0o600);
-                fs::set_permissions(&key_path, permissions)
+                use std::os::unix::fs::OpenOptionsExt;
+                options.mode(0o600);
+            }
+            let mut file = options
+                .open(&key_path)
+                .map_err(crate::error::GardError::IoError)?;
+            {
+                use std::io::Write;
+                file.write_all(&signing_key.to_bytes())
                     .map_err(crate::error::GardError::IoError)?;
+                file.sync_all().map_err(crate::error::GardError::IoError)?;
             }
 
-            // Save public key in OpenSSH format
-            let pub_key_path = Self::public_key_path()?;
+            // Save the public key as "ed25519 <hex>", matching report metadata
+            // and the output of `gard report --export-key`
+            let pub_key_path = crate::paths::public_key_path()?;
             let verifying_key = signing_key.verifying_key();
-            let pub_key_str = format!("ssh-ed25519 {}", hex::encode(verifying_key.as_bytes()));
+            let pub_key_str = format!("ed25519 {}\n", hex::encode(verifying_key.as_bytes()));
             fs::write(&pub_key_path, pub_key_str).map_err(crate::error::GardError::IoError)?;
 
             // Set public key file permissions to 0644 (readable by all, writable by owner)
@@ -121,28 +130,6 @@ impl ReportSigner {
     pub fn public_key_hex(&self) -> String {
         let verifying_key = self.signing_key.verifying_key();
         hex::encode(verifying_key.as_bytes())
-    }
-
-    /// Get private key path
-    fn private_key_path() -> Result<PathBuf> {
-        let gard_dir = dirs::home_dir()
-            .ok_or_else(|| {
-                crate::error::GardError::Internal("Could not determine home directory".to_string())
-            })?
-            .join(".gard");
-
-        Ok(gard_dir.join("keys").join("ed25519"))
-    }
-
-    /// Get public key path
-    fn public_key_path() -> Result<PathBuf> {
-        let gard_dir = dirs::home_dir()
-            .ok_or_else(|| {
-                crate::error::GardError::Internal("Could not determine home directory".to_string())
-            })?
-            .join(".gard");
-
-        Ok(gard_dir.join("keys").join("ed25519.pub"))
     }
 }
 

@@ -72,7 +72,12 @@ impl CheckModule for SolanaConfigCheck {
         }
 
         if let Some(ref url) = rpc_url {
-            findings.extend(self.audit_rpc_url(url, &config_path));
+            let policy = crate::config::load_policy(None).unwrap_or_default();
+            findings.extend(self.audit_rpc_url(
+                url,
+                &config_path,
+                &policy.solana.trusted_rpc_endpoints,
+            ));
         }
 
         Ok(findings)
@@ -132,7 +137,7 @@ impl SolanaConfigCheck {
         findings
     }
 
-    fn audit_rpc_url(&self, url: &str, config_path: &Path) -> Vec<Finding> {
+    fn audit_rpc_url(&self, url: &str, config_path: &Path, trusted: &[String]) -> Vec<Finding> {
         let mut findings = Vec::new();
 
         let known_endpoints = [
@@ -157,7 +162,11 @@ impl SolanaConfigCheck {
                     "issue": "plaintext_rpc"
                 }),
             ));
-        } else if !known_endpoints.contains(&url) {
+        } else if !known_endpoints.contains(&url)
+            && !trusted
+                .iter()
+                .any(|t| t.trim_end_matches('/') == url.trim_end_matches('/'))
+        {
             let mut finding = build_finding(
                 self,
                 format!(
@@ -224,8 +233,11 @@ mod tests {
     #[test]
     fn test_plaintext_rpc_blocks() {
         let check = SolanaConfigCheck;
-        let findings =
-            check.audit_rpc_url("http://rpc.example.com", &PathBuf::from("/tmp/config.yml"));
+        let findings = check.audit_rpc_url(
+            "http://rpc.example.com",
+            &PathBuf::from("/tmp/config.yml"),
+            &[],
+        );
         assert_eq!(findings.len(), 1);
         assert!(findings[0].blocking);
     }
@@ -236,6 +248,19 @@ mod tests {
         let findings = check.audit_rpc_url(
             "https://api.mainnet-beta.solana.com",
             &PathBuf::from("/tmp/config.yml"),
+            &[],
+        );
+        assert!(findings.is_empty());
+    }
+
+    #[test]
+    fn test_policy_trusted_rpc_passes() {
+        let check = SolanaConfigCheck;
+        let trusted = vec!["https://rpc.myteam.dev/".to_string()];
+        let findings = check.audit_rpc_url(
+            "https://rpc.myteam.dev",
+            &PathBuf::from("/tmp/config.yml"),
+            &trusted,
         );
         assert!(findings.is_empty());
     }

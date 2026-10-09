@@ -18,7 +18,7 @@ Options:
 - `-v, --verbose`: Include detailed check metadata and timing information
 - `--skip <CHECK>`: Skip specific check by name (comma-separated list)
 - `--only <CHECK>`: Run only specific check by name (comma-separated list)
-- `--sign`: Sign report with local Ed25519 keypair (default: true)
+- `--no-sign`: Skip report signing (reports are signed by default)
 - `--no-sign`: Do not sign report
 - `--timestamp`: Include precise timestamp in report (default: true)
 
@@ -35,7 +35,7 @@ Mandatory pre-signing checklist that blocks or warns before contributor proceeds
 Usage: `gard preflight [OPTIONS]`
 
 Options:
-- `--sign`: Confirm preflight passed, prepare for transaction signing (requires `--confirm`)
+- `--override <REASON>`: Override blocking findings with a justification (requires `--confirm`; recorded in `override.log`)
 - `--confirm`: Explicit confirmation that findings have been reviewed and addressed
 - `--override <REASON>`: Override blocking findings with explicit justification
 - `--config <PATH>`: Use custom configuration file
@@ -717,7 +717,7 @@ echo -n "<report_json>" | openssl dgst -sha256 -verify public_key.pem -signature
 ### 5.3 Report Signing Mechanism
 
 - Ed25519 keypair generated on first scan and stored at `~/.gard/keys/ed25519`
-- Public key exported to `~/.gard/keys/ed25519.pub` in OpenSSH format
+- Public key exported to `~/.gard/keys/ed25519.pub` as `ed25519 <hex>`
 - Report signature: Ed25519 signature of JSON report (deterministic serialization)
 - Signature appended to report as `signature` and `public_key` fields
 - Verification independent of Gard: signature validation via OpenSSL or other standard tools
@@ -810,7 +810,7 @@ Self-update without supply chain risk:
 3. Suppressed findings filtered based on policy
 4. Output format selected (json, plaintext, etc.)
 5. Format renderer produces output
-6. Signature added if `--sign` flag set
+6. Signature added unless `--no-sign` is given
 7. Output written to file or stdout
 8. Exit code calculated based on findings
 

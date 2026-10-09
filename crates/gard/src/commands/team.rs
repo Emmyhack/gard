@@ -1,6 +1,6 @@
 //! Team command - manage the trusted signer roster
 //!
-//! The roster lives in policy.toml under [team], so distributing one
+//! The roster lives in policy.toml under `[team]`, so distributing one
 //! policy file to every member also distributes the trust anchors used
 //! by 'gard verify' and 'gard fleet status'.
 

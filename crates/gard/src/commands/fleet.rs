@@ -77,7 +77,7 @@ async fn submit(
 
     let fleet_dir = resolve_fleet_dir(policy, dir)?;
     fs::create_dir_all(&fleet_dir)?;
-    let file_name = store_report(&fleet_dir, &report)?;
+    let file_name = store_report(&fleet_dir, &report, None)?;
 
     // Keep a previously generated dashboard current with every submission
     let dashboard_path = fleet_dir.join("index.html");
@@ -114,16 +114,33 @@ async fn submit(
 /// Write a report into the fleet directory, rotating the member's
 /// previous submission into history/ so status can diff against it.
 /// Returns the stored file name.
-fn store_report(fleet_dir: &Path, report: &Report) -> Result<String> {
-    let file_name = format!(
+fn store_report(fleet_dir: &Path, report: &Report, owner: Option<&str>) -> Result<String> {
+    let legacy_name = format!(
         "{}@{}.json",
         sanitize(&report.metadata.username),
         sanitize(&report.metadata.hostname)
     );
+    // Rostered members are keyed by their roster name, which is bound to
+    // their signing key, so no member can overwrite another's report by
+    // forging the username/hostname fields of a report they signed
+    let file_name = match owner {
+        Some(name) => format!("{}.json", sanitize(name)),
+        None => legacy_name.clone(),
+    };
     let path = fleet_dir.join(&file_name);
+    let history_dir = fleet_dir.join(HISTORY_DIR);
+
+    // A member newly added to the roster keeps their diff baseline: the
+    // legacy user@host file becomes their previous submission
+    if owner.is_some() && !path.exists() {
+        let legacy = fleet_dir.join(&legacy_name);
+        if legacy.exists() {
+            fs::create_dir_all(&history_dir)?;
+            fs::rename(&legacy, history_dir.join(&file_name))?;
+        }
+    }
 
     if path.exists() {
-        let history_dir = fleet_dir.join(HISTORY_DIR);
         fs::create_dir_all(&history_dir)?;
         fs::rename(&path, history_dir.join(&file_name))?;
     }
@@ -357,6 +374,12 @@ fn dashboard(
 /// Maximum accepted submission body (a signed report)
 const MAX_BODY_BYTES: usize = 4 * 1024 * 1024;
 
+/// Concurrent connections served before new ones are refused
+const MAX_CONNECTIONS: usize = 256;
+
+/// Budget for reading a request and writing its response
+const REQUEST_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(15);
+
 /// Serve the dashboard, live status API, and submission API. Fleet state
 /// is recomputed from the directory on every API request, so the page
 /// stays current without regeneration.
@@ -424,19 +447,43 @@ async fn serve(policy: &Policy, options: ServeOptions) -> Result<i32> {
     println!("Watching {} — Ctrl-C to stop.", fleet_dir.display());
 
     let token = std::sync::Arc::new(token);
+    let limiter = std::sync::Arc::new(tokio::sync::Semaphore::new(MAX_CONNECTIONS));
 
     loop {
-        let (mut stream, _) = match listener.accept().await {
-            Ok(conn) => conn,
-            Err(_) => continue,
+        let (mut stream, peer) = tokio::select! {
+            accepted = listener.accept() => match accepted {
+                Ok(conn) => conn,
+                Err(e) => {
+                    tracing::warn!(error = %e, "accept failed");
+                    continue;
+                },
+            },
+            _ = tokio::signal::ctrl_c() => {
+                println!("\nShutting down fleet server.");
+                return Ok(0);
+            }
+        };
+
+        // Over capacity: refuse rather than queue without bound
+        let Ok(permit) = limiter.clone().try_acquire_owned() else {
+            tracing::warn!(peer = %peer, "connection refused: at capacity");
+            drop(stream);
+            continue;
         };
         let fleet_dir = fleet_dir.clone();
         let token = token.clone();
 
         tokio::spawn(async move {
-            let Some(request) = read_request(&mut stream).await else {
-                return;
-            };
+            let _permit = permit;
+            let request =
+                match tokio::time::timeout(REQUEST_TIMEOUT, read_request(&mut stream)).await {
+                    Ok(Some(request)) => request,
+                    Ok(None) => return,
+                    Err(_) => {
+                        tracing::warn!(peer = %peer, "request timed out");
+                        return;
+                    },
+                };
 
             // Policy reloaded per request so roster/config edits apply live
             let policy = config::load_policy(None).unwrap_or_default();
@@ -445,9 +492,20 @@ async fn serve(policy: &Policy, options: ServeOptions) -> Result<i32> {
                 .max_age_hours
                 .map(|h| h as i64)
                 .unwrap_or(max_age);
-            let response = respond(&request, &policy, &fleet_dir, max_age, token.as_deref());
-            let _ = stream.write_all(response.as_bytes()).await;
-            let _ = stream.shutdown().await;
+            let mut response = respond(&request, &policy, &fleet_dir, max_age, token.as_deref());
+            if request.method == "HEAD" {
+                if let Some(end) = response.find("\r\n\r\n") {
+                    response.truncate(end + 4);
+                }
+            }
+            let status = response.split_whitespace().nth(1).unwrap_or("?");
+            tracing::info!(peer = %peer, method = %request.method, path = %request.path, status = %status, "request");
+
+            let _ = tokio::time::timeout(REQUEST_TIMEOUT, async {
+                let _ = stream.write_all(response.as_bytes()).await;
+                let _ = stream.shutdown().await;
+            })
+            .await;
         });
     }
 }
@@ -565,7 +623,14 @@ fn respond(
         )
     };
 
-    match (request.method.as_str(), request.path.as_str()) {
+    // HEAD is answered like GET; the caller strips the body
+    let method = if request.method == "HEAD" {
+        "GET"
+    } else {
+        request.method.as_str()
+    };
+
+    match (method, request.path.as_str()) {
         // The page itself is a data-free shell; all data is behind the API
         ("GET", "/") | ("GET", "/index.html") => {
             let html = include_str!("fleet_dashboard.html")
@@ -574,6 +639,8 @@ fn respond(
                 .replace("<meta http-equiv=\"refresh\" content=\"300\">\n", "");
             http_response("200 OK", "text/html; charset=utf-8", &html)
         },
+        // Liveness for load balancers and uptime monitors; carries no data
+        ("GET", "/healthz") => http_response("200 OK", "application/json", r#"{"status":"ok"}"#),
         ("GET", "/api/status") => {
             if !authorized {
                 return unauthorized();
@@ -632,16 +699,18 @@ fn handle_submission(body: &str, policy: &Policy, fleet_dir: &Path) -> String {
         return reject("403 Forbidden", "report signature is missing or invalid");
     }
 
+    let mut roster_name: Option<String> = None;
     if !policy.team.signers.is_empty() {
-        let known = report.metadata.public_key.as_ref().is_some_and(|pk| {
+        roster_name = report.metadata.public_key.as_ref().and_then(|pk| {
             let pk_hex = pk.strip_prefix("ed25519 ").unwrap_or(pk);
             policy
                 .team
                 .signers
                 .iter()
-                .any(|s| s.public_key.eq_ignore_ascii_case(pk_hex))
+                .find(|s| s.public_key.eq_ignore_ascii_case(pk_hex))
+                .map(|s| s.name.clone())
         });
-        if !known {
+        if roster_name.is_none() {
             return reject(
                 "403 Forbidden",
                 "signing key is not on the team roster; register it with 'gard team add'",
@@ -649,7 +718,7 @@ fn handle_submission(body: &str, policy: &Policy, fleet_dir: &Path) -> String {
         }
     }
 
-    match store_report(fleet_dir, &report) {
+    match store_report(fleet_dir, &report, roster_name.as_deref()) {
         Ok(file_name) => http_response(
             "200 OK",
             "application/json",
@@ -660,13 +729,30 @@ fn handle_submission(body: &str, policy: &Policy, fleet_dir: &Path) -> String {
 }
 
 fn http_response(status: &str, content_type: &str, body: &str) -> String {
-    format!(
-        "HTTP/1.1 {}\r\nContent-Type: {}\r\nContent-Length: {}\r\nCache-Control: no-store\r\nConnection: close\r\n\r\n{}",
+    let mut out = format!(
+        "HTTP/1.1 {}\r\nContent-Type: {}\r\nContent-Length: {}\r\n",
         status,
         content_type,
-        body.len(),
-        body
-    )
+        body.len()
+    );
+    out.push_str("Cache-Control: no-store\r\n");
+    out.push_str("X-Content-Type-Options: nosniff\r\n");
+    out.push_str("X-Frame-Options: DENY\r\n");
+    out.push_str("Referrer-Policy: no-referrer\r\n");
+    out.push_str("Connection: close\r\n");
+    if content_type.starts_with("text/html") {
+        // The dashboard is a single inline page: scripts and styles are
+        // inline, fonts come from Google Fonts, data only from this origin
+        out.push_str(
+            "Content-Security-Policy: default-src 'none'; script-src 'unsafe-inline'; \
+             style-src 'unsafe-inline' https://fonts.googleapis.com; \
+             font-src https://fonts.gstatic.com; connect-src 'self'; img-src 'self' data:; \
+             base-uri 'none'; form-action 'self'; frame-ancestors 'none'\r\n",
+        );
+    }
+    out.push_str("\r\n");
+    out.push_str(body);
+    out
 }
 
 /// Render the fleet view into the self-contained HTML template
@@ -1085,6 +1171,51 @@ mod tests {
         let r = http_response("200 OK", "text/plain", "abc");
         assert!(r.contains("Content-Length: 3"));
         assert!(r.ends_with("abc"));
+    }
+
+    #[test]
+    fn test_store_report_keys_rostered_members_by_name() {
+        let dir = std::env::temp_dir().join(format!("gard-store-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let report = report_with_checks(&[]);
+
+        assert_eq!(store_report(&dir, &report, None).unwrap(), "u@h.json");
+        // Promotion to the roster migrates the legacy file into history
+        assert_eq!(
+            store_report(&dir, &report, Some("alice")).unwrap(),
+            "alice.json"
+        );
+        assert!(dir.join("alice.json").exists());
+        assert!(!dir.join("u@h.json").exists());
+        assert!(dir.join(HISTORY_DIR).join("alice.json").exists());
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn test_healthz_is_public() {
+        let policy = crate::types::Policy::default();
+        let dir = std::env::temp_dir();
+        let r = respond(&get("/healthz", None), &policy, &dir, 24, Some("s3cret"));
+        assert!(r.starts_with("HTTP/1.1 200"));
+        assert!(r.contains("X-Content-Type-Options: nosniff"));
+    }
+
+    #[test]
+    fn test_head_routes_like_get() {
+        let policy = crate::types::Policy::default();
+        let dir = std::env::temp_dir();
+        let mut req = get("/healthz", None);
+        req.method = "HEAD".to_string();
+        assert!(respond(&req, &policy, &dir, 24, None).starts_with("HTTP/1.1 200"));
+    }
+
+    #[test]
+    fn test_html_response_carries_csp() {
+        let policy = crate::types::Policy::default();
+        let dir = std::env::temp_dir();
+        let r = respond(&get("/", None), &policy, &dir, 24, None);
+        assert!(r.contains("Content-Security-Policy:"));
+        assert!(r.contains("frame-ancestors 'none'"));
     }
 
     #[test]

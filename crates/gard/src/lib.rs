@@ -9,6 +9,7 @@ pub mod commands;
 pub mod config;
 pub mod error;
 pub mod output;
+pub mod paths;
 pub mod report;
 pub mod types;
 

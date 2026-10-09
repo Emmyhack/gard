@@ -13,6 +13,7 @@ pub mod software_wallets;
 pub mod solana_config;
 pub mod solana_nonce;
 pub mod ssh_hygiene;
+pub mod testflight_apps;
 pub mod unsigned_binaries;
 pub mod vscode_extension;
 pub mod vscode_workspace;

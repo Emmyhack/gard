@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta http-equiv="refresh" content="300">
 <title>Gard Fleet</title>
+<meta name="description" content="Signed machine-posture status for a Solana signing team">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
@@ -154,6 +155,11 @@ body {
 .updated { font-size: 12px; color: var(--muted); }
 .livedot { display: inline-block; width: 7px; height: 7px; border-radius: 50%;
            background: var(--good); margin-right: 5px; }
+.updated.offline { color: var(--critical); }
+.updated.offline .livedot { background: var(--critical); }
+@media (prefers-reduced-motion: reduce) {
+  .ring-arc, .card { transition: none; }
+}
 button.ghost {
   border: 1px solid var(--line-2); background: transparent; color: var(--ink-2);
   border-radius: 8px; padding: 6px 12px; font: inherit; font-size: 12.5px;
@@ -343,12 +349,12 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
       </div>
     </div>
     <div class="nav-label">Fleet</div>
-    <nav class="nav">
-      <button type="button" data-view="overview" class="active">Overview</button>
-      <button type="button" data-view="members">Members <span class="navnum" id="nav-members"></span></button>
-      <button type="button" data-view="findings">Findings matrix <span class="navnum" id="nav-findings"></span></button>
-      <button type="button" data-view="suppressions">Suppressions <span class="navnum" id="nav-supp"></span></button>
-      <button type="button" data-view="activity">Activity <span class="navnum" id="nav-act"></span></button>
+    <nav class="nav" role="tablist" aria-label="Dashboard sections">
+      <button type="button" role="tab" aria-selected="true" data-view="overview" class="active">Overview</button>
+      <button type="button" role="tab" aria-selected="false" data-view="members">Members <span class="navnum" id="nav-members"></span></button>
+      <button type="button" role="tab" aria-selected="false" data-view="findings">Findings matrix <span class="navnum" id="nav-findings"></span></button>
+      <button type="button" role="tab" aria-selected="false" data-view="suppressions">Suppressions <span class="navnum" id="nav-supp"></span></button>
+      <button type="button" role="tab" aria-selected="false" data-view="activity">Activity <span class="navnum" id="nav-act"></span></button>
     </nav>
     <div class="side-foot">
       Signed reports · Ed25519 verified<br>
@@ -357,6 +363,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   </aside>
 
   <main class="main">
+    <noscript><div class="card">This dashboard needs JavaScript enabled to render fleet status.</div></noscript>
     <div class="topbar">
       <div>
         <h1 id="view-title">Fleet overview</h1>
@@ -377,7 +384,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
       <span class="gate-err" id="tokenerr" hidden>Token rejected — check with your fleet admin.</span>
     </form>
 
-    <section class="view" data-view="overview">
+    <section class="view" role="tabpanel" data-view="overview">
       <section class="hero" id="hero">
         <div class="ring" id="ring">
           <svg viewBox="0 0 92 92" width="92" height="92" aria-hidden="true">
@@ -387,7 +394,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
           <span class="ring-in"><b id="ring-num">&#8212;</b><i>passing</i></span>
         </div>
         <div class="hero-copy">
-          <p class="state" id="hero-state">Loading fleet status&#8230;</p>
+          <p class="state" id="hero-state" aria-live="polite">Loading fleet status&#8230;</p>
           <div class="detail" id="hero-detail">Waiting for the first status response.</div>
         </div>
         <span class="badge ok" id="hero-badge" hidden></span>
@@ -411,7 +418,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
       </section>
     </section>
 
-    <section class="view" data-view="members" hidden>
+    <section class="view" role="tabpanel" data-view="members" hidden>
       <section class="card" id="members">
         <h2>Members <span class="count" id="member-count"></span></h2>
         <div class="tscroll">
@@ -428,7 +435,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
       </section>
     </section>
 
-    <section class="view" data-view="findings" hidden>
+    <section class="view" role="tabpanel" data-view="findings" hidden>
       <section class="card" id="matrix">
         <h2>Findings matrix <span class="count">worst severity per check &#215; member</span></h2>
         <div class="legend">
@@ -442,14 +449,14 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
       </section>
     </section>
 
-    <section class="view" data-view="suppressions" hidden>
+    <section class="view" role="tabpanel" data-view="suppressions" hidden>
       <section class="card" id="suppressions">
         <h2>Suppressions</h2>
         <div id="supp-list"></div>
       </section>
     </section>
 
-    <section class="view" data-view="activity" hidden>
+    <section class="view" role="tabpanel" data-view="activity" hidden>
       <section class="card" id="activity">
         <h2>Changes since last submissions</h2>
         <div id="act-list"></div>
@@ -706,8 +713,11 @@ const VIEWS = {
 };
 function showView(name) {
   if (!VIEWS[name]) name = "overview";
-  document.querySelectorAll(".nav button[data-view]").forEach((b) =>
-    b.classList.toggle("active", b.dataset.view === name));
+  document.querySelectorAll(".nav button[data-view]").forEach((b) => {
+    const on = b.dataset.view === name;
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-selected", on ? "true" : "false");
+  });
   document.querySelectorAll(".view[data-view]").forEach((v) => {
     v.hidden = v.dataset.view !== name;
   });
@@ -755,8 +765,17 @@ if (DATA === null) {
         tokenForm.hidden = true;
         return r.json();
       })
-      .then((d) => { DATA = d; render(); })
-      .catch(() => {});
+      .then((d) => {
+        DATA = d;
+        document.getElementById("updated").classList.remove("offline");
+        render();
+      })
+      .catch((err) => {
+        if (err && err.message === "unauthorized") return;
+        const u = document.getElementById("updated");
+        u.classList.add("offline");
+        u.innerHTML = '<span class="livedot"></span>Connection lost — retrying';
+      });
 
   tokenForm.addEventListener("submit", (e) => {
     e.preventDefault();

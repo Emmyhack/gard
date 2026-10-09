@@ -7,6 +7,18 @@ use std::process;
 async fn main() {
     let cli = Cli::parse();
 
+    // Global location flags are exported as environment variables so that
+    // library code resolves paths uniformly (see gard::paths)
+    if let Some(dir) = &cli.data_dir {
+        std::env::set_var(gard::paths::DATA_DIR_ENV, dir);
+    }
+    if let Some(config) = &cli.config {
+        std::env::set_var(gard::paths::CONFIG_ENV, config);
+    }
+    if cli.no_color {
+        colored::control::set_override(false);
+    }
+
     // Initialize logging
     let log_level = match cli.verbose {
         0 => "warn",

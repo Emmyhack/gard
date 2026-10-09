@@ -9,11 +9,11 @@ codegen-units = 1
 strip = true
 
 [workspace.package]
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["Gard Contributors"]
 license = "MIT"
-repository = "https://github.com/nextlevelbuilder/gard"
+repository = "https://github.com/Emmyhack/gard"
 description = "OPSEC guardian CLI tool for Solana protocol teams"
 
 [workspace.dependencies]
@@ -53,7 +53,7 @@ cfg-if = "1.0"
 chrono = { version = "0.4", features = ["serde"] }
 
 # Network utilities for RPC calls
-reqwest = { version = "0.11", features = ["json", "rustls-tls"], default-features = false }
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
 
 # Regex for pattern matching
 regex = "1.10"

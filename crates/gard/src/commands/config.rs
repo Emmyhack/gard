@@ -14,15 +14,7 @@ pub async fn execute(cmd: ConfigCommand) -> Result<i32> {
         ConfigSubcommand::Init => init(),
         ConfigSubcommand::Show => show(),
         ConfigSubcommand::Validate => validate(),
-        ConfigSubcommand::Set { key, value } => {
-            println!(
-                "Direct key setting is not supported yet; edit {} to set {} = {}",
-                config::get_default_policy_path()?.display(),
-                key,
-                value
-            );
-            Ok(2)
-        },
+        ConfigSubcommand::Set { key, value } => set_value(&key, &value),
         ConfigSubcommand::Check { name, level } => set_check_level(&name, level.as_deref()),
         ConfigSubcommand::Suppress {
             check_name,
@@ -108,6 +100,76 @@ fn validate() -> Result<i32> {
         }
         Ok(1)
     }
+}
+
+/// Keys settable through `gard config set`
+const SETTABLE_KEYS: &[&str] = &[
+    "hardware_wallet.required",
+    "hardware_wallet.minimum_type",
+    "fleet.dir",
+    "fleet.max_age_hours",
+    "nonce.expected_authority",
+    "solana.trusted_rpc_endpoints",
+    "solana.self_hosted_rpc_required",
+];
+
+fn set_value(key: &str, value: &str) -> Result<i32> {
+    let mut policy = config::load_policy(None)?;
+    let as_bool = |v: &str| -> Result<bool> {
+        match v.trim().to_lowercase().as_str() {
+            "true" | "yes" | "on" | "1" => Ok(true),
+            "false" | "no" | "off" | "0" => Ok(false),
+            other => Err(GardError::PolicyValidationError(format!(
+                "Expected true/false for {}, got '{}'",
+                key, other
+            ))),
+        }
+    };
+    let non_empty = |v: &str| {
+        let v = v.trim();
+        if v.is_empty() {
+            None
+        } else {
+            Some(v.to_string())
+        }
+    };
+
+    match key {
+        "hardware_wallet.required" => policy.hardware_wallet.required = as_bool(value)?,
+        "hardware_wallet.minimum_type" => policy.hardware_wallet.minimum_type = non_empty(value),
+        "fleet.dir" => policy.fleet.dir = non_empty(value),
+        "fleet.max_age_hours" => {
+            policy.fleet.max_age_hours = Some(value.trim().parse().map_err(|_| {
+                GardError::PolicyValidationError(format!(
+                    "Expected a whole number of hours for {}, got '{}'",
+                    key, value
+                ))
+            })?)
+        },
+        "nonce.expected_authority" => policy.nonce.expected_authority = non_empty(value),
+        "solana.trusted_rpc_endpoints" => {
+            policy.solana.trusted_rpc_endpoints = value
+                .split(',')
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .map(String::from)
+                .collect()
+        },
+        "solana.self_hosted_rpc_required" => {
+            policy.solana.self_hosted_rpc_required = as_bool(value)?
+        },
+        other => {
+            return Err(GardError::PolicyValidationError(format!(
+                "Unknown key '{}'. Settable keys: {}",
+                other,
+                SETTABLE_KEYS.join(", ")
+            )))
+        },
+    }
+
+    save_policy(&policy)?;
+    println!("Set {} = {}", key, value.trim());
+    Ok(0)
 }
 
 fn set_check_level(name: &str, level: Option<&str>) -> Result<i32> {
